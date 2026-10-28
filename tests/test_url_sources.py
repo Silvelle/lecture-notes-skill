@@ -38,6 +38,7 @@ def test_url_source_becomes_a_bundle_with_lecture_metadata(
         ("https://youtu.be/abc123?t=12", "https://youtu.be/abc123"),
         (f"{URL}&list=PL123&index=4", URL),
         ("https://www.youtube.com/watch?t=5&v=abc123", URL),
+        ("https://youtu.be/abc123?list=PL123&t=7", "https://youtu.be/abc123"),
     ],
 )
 def test_start_time_and_playlist_parameters_are_dropped(

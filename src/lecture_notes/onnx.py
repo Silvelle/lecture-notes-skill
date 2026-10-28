@@ -6,7 +6,7 @@ from pathlib import Path
 
 from lecture_notes import media
 from lecture_notes.errors import LectureNotesError
-from lecture_notes.hardware import TranscriberChoice
+from lecture_notes.hardware import BACKENDS, ONNX_ASR, TranscriberChoice
 from lecture_notes.transcriber import Segment, Transcription
 
 
@@ -15,9 +15,7 @@ class OnnxAsrTranscriber:
         try:
             import onnx_asr
         except ImportError:
-            raise LectureNotesError(
-                "the onnx-asr backend is not installed; pip install 'lecture-notes[ru]'"
-            ) from None
+            raise LectureNotesError(BACKENDS[ONNX_ASR].install_hint(ONNX_ASR)) from None
         providers = (["CUDAExecutionProvider", "CPUExecutionProvider"]
                      if choice.device == "cuda" else ["CPUExecutionProvider"])
         self._choice = choice

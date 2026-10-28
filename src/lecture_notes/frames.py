@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,8 +11,8 @@ from typing import Literal
 import imagehash
 from PIL import Image
 
+from lecture_notes import media
 from lecture_notes.errors import LectureNotesError
-from lecture_notes.media import tool
 
 # Slides that differ only in a few lines of code score ~0.01-0.02 on ffmpeg's scene
 # metric, while compression noise on a static slide scores ~0.0001.
@@ -115,28 +114,23 @@ def _gaps(times: list[float], duration: float, min_interval: float) -> list[floa
 
 def _frame_at(source: Path, time: float, tmp: Path) -> Path:
     out = tmp / f"at_{time:.3f}.png"
-    result = subprocess.run(
-        [tool("ffmpeg"), "-y", "-loglevel", "error", "-ss", f"{time:.3f}", "-i", str(source),
-         "-frames:v", "1", "-vf", f"scale='min({MAX_WIDTH},iw)':-2", str(out)],
-        capture_output=True, text=True,
-    )
-    if result.returncode != 0 or not out.is_file():
-        raise LectureNotesError(f"{source}: could not read the video frame at {time:.1f} s")
+    message = f"{source}: could not read the video frame at {time:.1f} s"
+    media.run("ffmpeg", "-y", "-loglevel", "error", "-ss", f"{time:.3f}", "-i", str(source),
+              "-frames:v", "1", "-vf", f"scale='min({MAX_WIDTH},iw)':-2", str(out), error=message)
+    if not out.is_file():
+        raise LectureNotesError(message)
     return out
 
 
 def _scene_changes(source: Path, tmp: Path) -> list[tuple[float, Path]]:
     """The first frame plus every frame whose scene score passes the threshold, as small
     candidate images for hashing (a long lecture can have thousands of them)."""
-    result = subprocess.run(
-        [tool("ffmpeg"), "-hide_banner", "-nostats", "-i", str(source), "-an",
-         "-vf", f"select='eq(n,0)+gt(scene,{SCENE_THRESHOLD})',showinfo,"
-                f"scale={HASH_WIDTH}:-2",
-         "-fps_mode", "vfr", str(tmp / "candidate_%06d.png")],
-        capture_output=True, text=True,
+    result = media.run(
+        "ffmpeg", "-hide_banner", "-nostats", "-i", str(source), "-an",
+        "-vf", f"select='eq(n,0)+gt(scene,{SCENE_THRESHOLD})',showinfo,scale={HASH_WIDTH}:-2",
+        "-fps_mode", "vfr", str(tmp / "candidate_%06d.png"),
+        error=f"{source}: could not read video frames",
     )
-    if result.returncode != 0:
-        raise LectureNotesError(f"{source}: could not read video frames")
     times = [
         float(match.group(1))
         for line in result.stderr.splitlines()

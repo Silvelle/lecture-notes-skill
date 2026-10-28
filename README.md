@@ -14,7 +14,7 @@ It works with Claude Code, Codex, Gemini CLI, Cursor and any agent that reads `S
 pipx install 'lecture-notes[whisper]'
 ```
 
-You also need [ffmpeg](https://ffmpeg.org). For YouTube, install [deno](https://deno.land) too.
+`pip install 'lecture-notes[whisper]'` and `uvx --from 'lecture-notes[whisper]' lecture-notes` work too. You also need [ffmpeg](https://ffmpeg.org). For YouTube, install [deno](https://deno.land) too.
 
 <details>
 <summary><strong>Extras</strong></summary>
@@ -114,7 +114,7 @@ Source ──extract──▶ Lecture bundle ──agent──▶ Lecture note �
 
 1. `extract` builds the **Lecture bundle**: `manifest.json`, `transcript.json`, `transcript.md` and `frames/`.
 2. The agent reads all of it, including every Key frame image.
-3. The agent writes one note in [this format](skills/lecture-notes/note-format.md).
+3. The agent writes one note in [this format](skills/lecture-notes/note-format.md). Key frames go to `attachments/<lecture>/` in your vault.
 4. `verify` checks every Citation. The agent fixes and re-runs until it passes.
 
 The package itself never calls an LLM ([ADR-0001](docs/adr/0001-no-llm-calls-in-package.md)). Without an agent you still get the full transcript and the frames.
@@ -163,6 +163,7 @@ Python 3.11 or newer, ffmpeg, and deno for YouTube.
 | GPU, 8 GB+ free | large-v3, float16 | ~5 min |
 | GPU, 5-8 GB | large-v3-turbo, float16 | ~3 min |
 | GPU, 3-5 GB | medium, float16 | ~3 min |
+| GPU, under 3 GB | small, float16 | ~2 min |
 | CPU only | small, int8 | ~25 min |
 | Russian + `[ru]` extra | GigaAM v3 | ~6 min on CPU |
 

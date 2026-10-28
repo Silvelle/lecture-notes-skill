@@ -67,8 +67,11 @@ def normalise_url(url: str) -> str:
     query = [(k, v) for k, v in parse_qsl(parts.query, keep_blank_values=True)
              if k not in TIME_PARAMETERS]
     keys = {k for k, _ in query}
+    names_a_video = "v" in keys or parts.netloc.endswith("youtu.be") or any(
+        parts.path.startswith(prefix) for prefix in ("/shorts/", "/live/", "/embed/")
+    )
     if "list" in keys:
-        if "v" not in keys:
+        if not names_a_video:
             raise LectureNotesError(
                 f"{url} is a playlist; pass the URL of one video (one Lecture per run)"
             )

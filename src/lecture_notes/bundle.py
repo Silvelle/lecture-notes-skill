@@ -12,6 +12,9 @@ from lecture_notes.frames import KeyFrames
 from lecture_notes.transcriber import Segment, Transcription
 
 SCHEMA_VERSION = 1
+MANIFEST = "manifest.json"
+TRANSCRIPT_JSON = "transcript.json"
+TRANSCRIPT_MARKDOWN = "transcript.md"
 PARAGRAPH_PAUSE = 3.0  # seconds of silence that start a new paragraph
 PARAGRAPH_SPAN = 60.0  # longest a paragraph runs before a new timestamp
 
@@ -24,16 +27,13 @@ def write(
     channel: str | None,
     duration: float,
     transcription: Transcription,
-    transcript_origin: str,
-    backend: str | None,
-    hardware_tier: str | None,
-    compute_type: str | None,
     language_overridden: bool,
     key_frames: KeyFrames,
 ) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
+    choice = transcription.choice
     _write_json(
-        out_dir / "manifest.json",
+        out_dir / MANIFEST,
         {
             "schema_version": SCHEMA_VERSION,
             "tool_version": __version__,
@@ -43,21 +43,21 @@ def write(
             "duration": round(duration, 3),
             "language": transcription.language,
             "language_origin": "user" if language_overridden else "detected",
-            "transcript_origin": transcript_origin,
-            "backend": backend,
+            "transcript_origin": transcription.origin,
+            "backend": choice.backend if choice else None,
             "model": transcription.model,
             "device": transcription.device,
-            "compute_type": compute_type,
-            "hardware_tier": hardware_tier,
+            "compute_type": transcription.compute_type or (choice.compute_type if choice else None),
+            "hardware_tier": choice.tier if choice else None,
             "key_frames": asdict(key_frames),
-            "files": {"transcript_json": "transcript.json", "transcript_markdown": "transcript.md"},
+            "files": {"transcript_json": TRANSCRIPT_JSON, "transcript_markdown": TRANSCRIPT_MARKDOWN},
         },
     )
     _write_json(
-        out_dir / "transcript.json",
+        out_dir / TRANSCRIPT_JSON,
         {"language": transcription.language, "segments": [asdict(s) for s in transcription.segments]},
     )
-    (out_dir / "transcript.md").write_text(
+    (out_dir / TRANSCRIPT_MARKDOWN).write_text(
         transcript_markdown(title, transcription.segments), encoding="utf-8"
     )
 

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import shutil
 import subprocess
-import sys
 from dataclasses import replace
 from pathlib import Path
 
+from lecture_notes.errors import warn
 from lecture_notes.frames import KeyFrames
 
 # Transcript language (ISO 639-1) to tesseract language pack.
@@ -47,8 +47,8 @@ def add_text(key_frames: KeyFrames, bundle_dir: Path, language: str) -> KeyFrame
     wanted = TESSERACT_LANGUAGES.get(language, language)
     languages = [wanted] if wanted in installed and wanted != "eng" else []
     if wanted != "eng" and wanted not in installed:
-        print(f"lecture-notes: warning: no tesseract pack for {language!r}; OCR uses English "
-              f"only (install tesseract-ocr-{wanted})", file=sys.stderr)
+        warn(f"no tesseract pack for {language!r}; OCR uses English only "
+             f"(install tesseract-ocr-{wanted})")
     languages.append("eng")
     frames = []
     for frame in key_frames.frames:

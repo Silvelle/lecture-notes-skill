@@ -65,3 +65,12 @@ def test_choosing_a_backend_that_is_not_installed_says_how_to_install_it(
 
     assert code == 1
     assert "lecture-notes[ru]" in capsys.readouterr().err
+
+
+def test_an_explicit_whisper_model_keeps_faster_whisper_for_russian(
+    lecture_file: Path, tmp_path: Path, fake_transcriber: FakeTranscriber
+) -> None:
+    manifest = extract(tmp_path, lecture_file, fake_transcriber, WITH_ONNX,
+                       "--lang", "ru", "--model", "large-v3")
+
+    assert (manifest["backend"], manifest["model"]) == ("faster-whisper", "large-v3")

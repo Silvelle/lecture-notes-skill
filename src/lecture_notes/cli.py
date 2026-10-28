@@ -8,11 +8,12 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
-from lecture_notes import doctor
+from lecture_notes import doctor, errors
 from lecture_notes.errors import LectureNotesError
 from lecture_notes.extract import TranscriberFactory, extract
 from lecture_notes.frames import DEFAULT_MIN_INTERVAL
 from lecture_notes.sources import Downloader
+from lecture_notes import hardware as hardware_module
 from lecture_notes.hardware import DeviceReport
 from lecture_notes.verify import verify
 
@@ -43,7 +44,7 @@ def main(
                              "(default: chosen for this machine, see `doctor`)")
     extract_cmd.add_argument("--device", choices=["cpu", "cuda"], help="where to run it")
     extract_cmd.add_argument(
-        "--backend", choices=["faster-whisper", "onnx-asr"],
+        "--backend", choices=list(hardware_module.BACKENDS),
         help="speech recognition backend (default: onnx-asr/GigaAM for Russian when installed)",
     )
     extract_cmd.add_argument("--yes", action="store_true",
@@ -93,7 +94,7 @@ def main(
             min_frame_interval=args.min_frame_interval,
         )
     except LectureNotesError as error:
-        print(f"lecture-notes: error: {error}", file=sys.stderr)
+        errors.report(str(error))
         return 1
     print(bundle)
     return 0
@@ -104,12 +105,12 @@ def _verify(note: Path, bundle: Path, *, as_json: bool) -> int:
     try:
         text = note.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
-        print(f"lecture-notes: error: cannot read {note}", file=sys.stderr)
+        errors.report(f"cannot read {note}")
         return 2
     try:
         problems = verify(text, bundle)
     except LectureNotesError as error:
-        print(f"lecture-notes: error: {error}", file=sys.stderr)
+        errors.report(str(error))
         return 2
     if as_json:
         report = {"ok": not problems, "problems": [asdict(p) for p in problems]}

@@ -15,7 +15,24 @@ CONFIRM_ABOVE_SECONDS = 10 * 60
 FASTER_WHISPER = "faster-whisper"
 ONNX_ASR = "onnx-asr"
 GIGAAM = "gigaam-v3-e2e-rnnt"  # GigaAM v3 with punctuation, Russian only
-_BACKEND_MODULES = {FASTER_WHISPER: "faster_whisper", ONNX_ASR: "onnx_asr"}
+
+
+@dataclass(frozen=True)
+class Backend:
+    """A speech-recognition backend and how to install it."""
+
+    module: str
+    extra: str
+    purpose: str
+
+    def install_hint(self, name: str) -> str:
+        return f"{self.purpose} needs {name}; install it with: pip install 'lecture-notes[{self.extra}]'"
+
+
+BACKENDS = {
+    FASTER_WHISPER: Backend(module="faster_whisper", extra="whisper", purpose="speech recognition"),
+    ONNX_ASR: Backend(module="onnx_asr", extra="ru", purpose="GigaAM for Russian Lectures"),
+}
 
 # Rough processing time per second of audio, from the backends' published benchmarks.
 _SPEED = {
@@ -73,7 +90,7 @@ def probe() -> DeviceReport:
     and which speech backends are installed."""
     cpu_count = os.cpu_count() or 2
     backends = frozenset(
-        name for name, module in _BACKEND_MODULES.items() if _installed(module)
+        name for name, backend in BACKENDS.items() if _installed(backend.module)
     )
     try:
         import ctranslate2
@@ -112,8 +129,9 @@ def choose(report: DeviceReport, *, model: str | None = None, device: str | None
                                    compute_type="float16", cpu_threads=threads)
     else:
         choice = _gpu_choice(gpu, threads)
-    if backend is None:
-        backend = ONNX_ASR if language == "ru" and ONNX_ASR in report.backends else FASTER_WHISPER
+    if backend is None:  # an explicit --model names a faster-whisper model
+        russian = language == "ru" and ONNX_ASR in report.backends and model is None
+        backend = ONNX_ASR if russian else FASTER_WHISPER
     if backend == ONNX_ASR:
         choice = replace(choice, backend=ONNX_ASR, model=GIGAAM, compute_type="float32")
     if model:

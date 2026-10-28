@@ -2,19 +2,13 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 from typing import Any
 
 from lecture_notes import media
-from lecture_notes.errors import LectureNotesError
-from lecture_notes.hardware import TranscriberChoice
+from lecture_notes.errors import LectureNotesError, warn
+from lecture_notes.hardware import BACKENDS, FASTER_WHISPER, TranscriberChoice
 from lecture_notes.transcriber import Segment, Transcription
-
-
-WHISPER_MISSING = (
-    "speech recognition needs faster-whisper; install it with: pip install 'lecture-notes[whisper]'"
-)
 
 
 class FasterWhisperTranscriber:
@@ -22,13 +16,14 @@ class FasterWhisperTranscriber:
         try:
             from faster_whisper import WhisperModel
         except ImportError:
-            raise LectureNotesError(WHISPER_MISSING) from None
+            raise LectureNotesError(BACKENDS[FASTER_WHISPER].install_hint(FASTER_WHISPER)) from None
         self._model_class = WhisperModel
         self._choice = choice
         self._load(choice.device, choice.compute_type)
 
     def _load(self, device: str, compute_type: str) -> None:
         self._device = device
+        self._compute_type = compute_type
         self._model = self._model_class(
             self._choice.model, device=device, compute_type=compute_type,
             cpu_threads=self._choice.cpu_threads, num_workers=1,
@@ -43,7 +38,7 @@ class FasterWhisperTranscriber:
             # are not installed; that only surfaces once inference starts.
             if self._device != "cuda" or not _is_missing_cuda_library(error):
                 raise
-            print(f"lecture-notes: warning: {error}; falling back to CPU", file=sys.stderr)
+            warn(f"{error}; falling back to CPU")
             self._load("cpu", "int8")
             return self._transcribe(samples, language)
 
@@ -54,6 +49,7 @@ class FasterWhisperTranscriber:
             segments=[Segment(start=s.start, end=s.end, text=s.text.strip()) for s in segments],
             model=self._choice.model,
             device=self._device,
+            compute_type=self._compute_type,
         )
 
 

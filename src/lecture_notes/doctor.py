@@ -26,12 +26,9 @@ def report(device_report: DeviceReport | None = None) -> tuple[list[str], bool]:
         else "missing: YouTube needs one; install deno (https://deno.land)",
     ))
     lines.append(_line("yt-dlp", _module_status("yt_dlp", "URL Sources")))
-    lines.append(_line("faster-whisper", _module_status(
-        "faster_whisper", "speech recognition; pip install 'lecture-notes[whisper]'"
-    )))
-    lines.append(_line("onnx-asr", _module_status(
-        "onnx_asr", "GigaAM for Russian Lectures; pip install 'lecture-notes[ru]'"
-    )))
+    for name, backend in hardware.BACKENDS.items():
+        installed = name in device_report.backends
+        lines.append(_line(name, "ok" if installed else f"missing: {backend.install_hint(name)}"))
     lines.append(_line("tesseract", _tesseract_status()))
     return lines, ffmpeg_ok
 

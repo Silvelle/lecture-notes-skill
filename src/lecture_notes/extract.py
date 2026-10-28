@@ -6,7 +6,7 @@ import re
 import sys
 import tempfile
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from lecture_notes import bundle, frames, hardware, media, ocr
@@ -21,26 +21,14 @@ from lecture_notes.sources import (
     pick_subtitles,
 )
 from lecture_notes.hardware import DeviceReport, TranscriberChoice
-from lecture_notes.transcriber import Transcriber, Transcription
+from lecture_notes.transcriber import Transcriber, Transcription, TranscriptOrigin
 
 TranscriberFactory = Callable[[TranscriberChoice], Transcriber]
 
-BACKEND_MISSING = {
-    hardware.FASTER_WHISPER: "speech recognition needs faster-whisper; "
-    "install it with: pip install 'lecture-notes[whisper]'",
-    hardware.ONNX_ASR: "the onnx-asr backend (GigaAM for Russian) is not installed; "
-    "install it with: pip install 'lecture-notes[ru]'",
-}
 
-# Transcript origins, best first.
-HUMAN_SUBTITLES = "human_subtitles"
-LOCAL_SPEECH_RECOGNITION = "local_speech_recognition"
-AUTO_SUBTITLES = "auto_subtitles"
-
-
-@dataclass
+@dataclass(frozen=True)
 class _Recognition:
-    """How local speech recognition will run, if it does; `used` records the choice."""
+    """How local speech recognition will run, if it does."""
 
     factory: TranscriberFactory | None  # None: the installed backend for the choice
     report: DeviceReport
@@ -48,7 +36,6 @@ class _Recognition:
     device: str | None
     backend: str | None
     assume_yes: bool
-    used: TranscriberChoice | None = None
 
     @property
     def available(self) -> bool:
@@ -94,8 +81,10 @@ def extract(
         if is_url(source):
             url = normalise_url(source)
             downloader = downloader or _default_downloader(cookies_from_browser)
-            info, fetched, blocked = _fetch_url(url, downloader, workdir)
-            transcription, origin = _url_transcript(
+            info, fetched, blocked = _fetch_url(
+                url, downloader, workdir, with_key_frames=with_key_frames, language=language
+            )
+            transcription = _url_transcript(
                 url, info, fetched, downloader, recognition, language, allow_auto_subs, workdir,
             )
             if transcription is None:
@@ -105,7 +94,6 @@ def extract(
             fetched = _fetch_file(Path(source))
             assert fetched.video is not None
             transcription = _recognise(fetched, recognition, language, workdir)
-            origin = LOCAL_SPEECH_RECOGNITION
 
         out_dir = out_dir or Path(_folder_name(fetched.title))
         frames.remove_key_frames(out_dir)
@@ -120,14 +108,9 @@ def extract(
                 fetched.video, out_dir, duration=fetched.duration, min_interval=min_frame_interval
             )
             key_frames = ocr.add_text(key_frames, out_dir, transcription.language)
-    used = recognition.used
     bundle.write(out_dir, source=fetched.source_entry, title=fetched.title,
                  channel=fetched.channel, duration=fetched.duration,
-                 transcription=transcription, transcript_origin=origin,
-                 backend=used.backend if used else None,
-                 hardware_tier=used.tier if used else None,
-                 compute_type=used.compute_type if used else None,
-                 language_overridden=language is not None, key_frames=key_frames)
+                 transcription=transcription, language_overridden=language is not None, key_frames=key_frames)
     return out_dir
 
 
@@ -144,19 +127,23 @@ def _fetch_file(path: Path) -> _Fetched:
 
 
 def _fetch_url(
-    url: str, downloader: Downloader, workdir: Path
+    url: str, downloader: Downloader, workdir: Path, *, with_key_frames: bool,
+    language: str | None,
 ) -> tuple[LectureInfo, _Fetched, SourceBlocked | None]:
-    """Metadata plus the video; a blocked video is not fatal while subtitles may exist."""
+    """Metadata plus the video, unless neither Key frames nor speech recognition need it.
+    A blocked video is not fatal while subtitles may exist."""
     try:
         info = downloader.info(url)
     except SourceBlocked as error:
         raise LectureNotesError(blocked_message(url, error)) from None
-    video: Path | None
+    has_human_subtitles = pick_subtitles(info.subtitle_languages, language or info.language)
+    video: Path | None = None
     blocked: SourceBlocked | None = None
-    try:
-        video = downloader.download_video(url, workdir)
-    except SourceBlocked as error:
-        video, blocked = None, error
+    if with_key_frames or not has_human_subtitles:
+        try:
+            video = downloader.download_video(url, workdir)
+        except SourceBlocked as error:
+            blocked = error
     fetched = _Fetched(
         source_entry={"kind": "url", "url": info.url},
         title=info.title,
@@ -176,28 +163,30 @@ def _url_transcript(
     language: str | None,
     allow_auto_subs: bool,
     workdir: Path,
-) -> tuple[Transcription | None, str]:
+) -> Transcription | None:
     """Human-written subtitles, else local speech recognition, else auto-generated
     subtitles (only when allowed or when local recognition is impossible)."""
     language = language or info.language
     human = pick_subtitles(info.subtitle_languages, language)
     if human:
-        return _subtitles(url, downloader, human, automatic=False), HUMAN_SUBTITLES
+        return _subtitles(url, downloader, human, automatic=False)
     can_recognise = fetched.video is not None and recognition.available
     if can_recognise and not allow_auto_subs:
-        return _recognise(fetched, recognition, language, workdir), LOCAL_SPEECH_RECOGNITION
+        return _recognise(fetched, recognition, language, workdir)
     auto = pick_subtitles(info.auto_subtitle_languages, language)
     if auto:
-        return _subtitles(url, downloader, auto, automatic=True), AUTO_SUBTITLES
+        return _subtitles(url, downloader, auto, automatic=True)
     if can_recognise:  # --allow-auto-subs, but there are none
-        return _recognise(fetched, recognition, language, workdir), LOCAL_SPEECH_RECOGNITION
-    return None, ""
+        return _recognise(fetched, recognition, language, workdir)
+    return None
 
 
 def _subtitles(url: str, downloader: Downloader, code: str, *, automatic: bool) -> Transcription:
     segments = downloader.fetch_subtitles(url, code, automatic=automatic)
     language = code.removesuffix("-orig").split("-")[0]
-    return Transcription(language=language, segments=segments, model=None, device=None)
+    origin = TranscriptOrigin.AUTO_SUBTITLES if automatic else TranscriptOrigin.HUMAN_SUBTITLES
+    return Transcription(language=language, segments=segments, model=None, device=None,
+                         origin=origin)
 
 
 def _recognise(fetched: _Fetched, recognition: _Recognition, language: str | None,
@@ -207,16 +196,17 @@ def _recognise(fetched: _Fetched, recognition: _Recognition, language: str | Non
                              device=recognition.device, backend=recognition.backend,
                              language=language)
     if recognition.factory is None and choice.backend not in recognition.report.backends:
-        raise LectureNotesError(BACKEND_MISSING.get(choice.backend, f"unknown backend {choice.backend}"))
-    _confirm_heavy_work(choice, recognition.assume_yes, fetched.duration)
+        raise LectureNotesError(hardware.BACKENDS[choice.backend].install_hint(choice.backend))
+    _confirm_heavy_work(choice, recognition.assume_yes, fetched.duration,
+                        url_source=fetched.source_entry["kind"] == "url")
     transcriber = (recognition.factory or _default_transcriber)(choice)
-    recognition.used = choice
     wav = workdir / "audio.wav"
     media.extract_audio(fetched.video, wav)
-    return transcriber.transcribe(wav, language)
+    return replace(transcriber.transcribe(wav, language), choice=choice)
 
 
-def _confirm_heavy_work(choice: TranscriberChoice, assume_yes: bool, audio_seconds: float) -> None:
+def _confirm_heavy_work(choice: TranscriberChoice, assume_yes: bool, audio_seconds: float,
+                        *, url_source: bool) -> None:
     """Show the estimate; on CPU, ask before a long job (or demand --yes off a terminal)."""
     estimate = choice.estimate_seconds(audio_seconds)
     print(f"Estimated transcription time: ~{_duration(estimate)} for {_duration(audio_seconds)} "
@@ -226,9 +216,10 @@ def _confirm_heavy_work(choice: TranscriberChoice, assume_yes: bool, audio_secon
     if estimate <= hardware.CONFIRM_ABOVE_SECONDS:
         return
     if not sys.stdin.isatty():
+        alternative = (", or with --allow-auto-subs to use the site's subtitles instead"
+                       if url_source else "")
         raise LectureNotesError(
-            "this would keep the CPU busy for a long time; rerun with --yes to go ahead, "
-            "or with --allow-auto-subs to use the site's subtitles instead"
+            f"this would keep the CPU busy for a long time; rerun with --yes to go ahead{alternative}"
         )
     print("Continue? [y/N] ", end="", file=sys.stderr, flush=True)
     if sys.stdin.readline().strip().lower() not in ("y", "yes"):

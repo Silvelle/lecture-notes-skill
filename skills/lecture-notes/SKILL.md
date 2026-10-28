@@ -13,7 +13,7 @@ Inputs from the user: the **Source** (URL or file path), optionally a **vault fo
 
 ## 1. Check the tool
 
-Run `lecture-notes doctor`. If the command is missing, install it with `pip install 'lecture-notes[whisper]'`. If `doctor` reports ffmpeg or the JS runtime missing, tell the user what to install and stop.
+Run `lecture-notes doctor`. If the command is missing, install it with `pip install 'lecture-notes[whisper]'`. If `doctor` reports ffmpeg missing, or the JS runtime missing for a YouTube Source, tell the user what to install and stop.
 
 ## 2. Extract the Lecture bundle
 
@@ -38,7 +38,7 @@ Done when you have read the Transcript end to end and looked at every Key frame.
 
 Read [note-format.md](note-format.md) now and follow it: frontmatter, topics, Citation forms, Board content, Unclear markers, language.
 
-Write the note to `<vault>/<title>.md`. Copy each Key frame you embed from `<bundle>/frames/` into `<vault>/attachments/`.
+Write the note to `<vault>/<title>.md`, with `/ \ : * ? " < > |` in the title replaced by `-`. Copy each Key frame you embed from `<bundle>/frames/` into `<vault>/attachments/<short-name>/` (the same short name as the bundle), so frames of different Lectures never collide, and embed them by that path.
 
 ## 5. Verify until it passes
 

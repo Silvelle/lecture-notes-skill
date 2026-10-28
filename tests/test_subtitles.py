@@ -120,3 +120,18 @@ def test_blocked_video_without_subtitles_is_the_blocked_error(
 
     assert code == 1
     assert "Ways out" in capsys.readouterr().err
+
+
+def test_no_frames_with_human_subtitles_skips_the_video_download(
+    tmp_path: Path, fake_downloader: FakeDownloader, fake_transcriber: FakeTranscriber
+) -> None:
+    fake_downloader.human_subtitles = {"en": HUMAN}
+    fake_downloader.video = None  # a download attempt would fail
+
+    code, bundle = extract(tmp_path, fake_downloader, "--no-frames",
+                           transcriber_factory=fake_transcriber)
+
+    assert code == 0
+    manifest = read_json(bundle / "manifest.json")
+    assert manifest["transcript_origin"] == "human_subtitles"
+    assert manifest["key_frames"]["status"] == "skipped"

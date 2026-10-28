@@ -13,7 +13,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
-from lecture_notes.bundle import format_timestamp
+from lecture_notes.bundle import MANIFEST, TRANSCRIPT_JSON, format_timestamp
 from lecture_notes.errors import LectureNotesError
 
 # [12:34] or [1:02:05], optionally a link: [12:34](https://youtu.be/x?t=754)
@@ -68,8 +68,8 @@ class _Bundle:
 
     @classmethod
     def load(cls, directory: Path) -> _Bundle:
-        manifest = _read_json(directory / "manifest.json")
-        transcript = _read_json(directory / "transcript.json")
+        manifest = _read_json(directory / MANIFEST)
+        transcript = _read_json(directory / TRANSCRIPT_JSON)
         try:
             frames = manifest.get("key_frames", {}).get("frames", [])
             return cls(

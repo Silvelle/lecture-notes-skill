@@ -31,7 +31,7 @@ Every idea line ends with at least one Citation:
 
 - URL Source: `[12:34](<source URL>&t=754)`. The `t=` value is the label in seconds. For `youtu.be` links use `?t=754`.
 - Local file: `[12:34]`.
-- A Key frame embed also counts: `![[frame_000754.jpg]]`.
+- A Key frame embed also counts: `![[attachments/<short-name>/frame_000754.jpg]]`.
 
 Cite the start of the Transcript segment the idea comes from (or the Key frame's time). Use `[h:mm:ss]` past the first hour.
 
@@ -42,7 +42,7 @@ Transcribe what is shown from the Key frames, never from the speech alone:
 - **Code**: a fenced block with its language (` ```python `), copied exactly as on screen, then a bullet that cites it.
 - **Formulas**: LaTeX, `$...$` inline or a `$$` block.
 - **Slide text**: bullets, cited.
-- **Diagrams, chemical structures, plots**: embed the Key frame (`![[frame_000754.jpg]]`) and write only the labels visible in it.
+- **Diagrams, chemical structures, plots**: embed the Key frame (`![[attachments/<short-name>/frame_000754.jpg]]`) and write only the labels visible in it.
 
 ## Faithfulness
 
@@ -81,6 +81,6 @@ else:
     print("a is not 1")
 ```
 
-- Пример с `else` на слайде ![[frame_000760.jpg]]
+- Пример с `else` на слайде ![[attachments/python-basics/frame_000760.jpg]]
 - [unclear: формула на доске не читается] [1:05:12](https://www.youtube.com/watch?v=1GLDLn-HQe8&t=3912)
 ````
