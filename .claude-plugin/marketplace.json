@@ -1,0 +1,17 @@
+{
+  "name": "lecture-notes",
+  "owner": {
+    "name": "Silvelle",
+    "url": "https://github.com/Silvelle"
+  },
+  "description": "Faithful, cited Obsidian notes from video lectures, as an installable Claude Code plugin.",
+  "plugins": [
+    {
+      "name": "lecture-notes",
+      "source": "./",
+      "description": "Turn a video lecture (YouTube, any yt-dlp URL, or a local file) into one Obsidian note where every idea cites the lecture, checked by `lecture-notes verify`.",
+      "category": "productivity",
+      "keywords": ["lectures", "transcript", "obsidian", "notes"]
+    }
+  ]
+}

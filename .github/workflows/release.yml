@@ -1,0 +1,21 @@
+name: Release
+
+# Push a tag like v0.1.0 to publish to PyPI. Needs a trusted publisher set up on PyPI
+# for this repo and the `pypi` environment (see CONTRIBUTING.md).
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: python -m pip install --upgrade pip build && python -m build
+      - uses: pypa/gh-action-pypi-publish@release/v1

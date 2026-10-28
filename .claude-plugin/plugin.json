@@ -1,0 +1,14 @@
+{
+  "name": "lecture-notes",
+  "version": "0.1.0",
+  "description": "Turn video lectures into faithful Obsidian notes: every idea cites a timestamp or a Key frame, checked by `lecture-notes verify`.",
+  "author": {
+    "name": "Silvelle",
+    "url": "https://github.com/Silvelle"
+  },
+  "homepage": "https://github.com/Silvelle/lecture-notes-skill",
+  "repository": "https://github.com/Silvelle/lecture-notes-skill",
+  "license": "MIT",
+  "keywords": ["lectures", "transcript", "obsidian", "whisper", "yt-dlp", "notes", "faithful"],
+  "skills": ["./skills/lecture-notes"]
+}

@@ -5,10 +5,11 @@ build-backend = "hatchling.build"
 [project]
 name = "lecture-notes"
 version = "0.1.0"
-description = "Turn video lectures into faithful, timestamped Lecture bundles for humans and agents."
+description = "Faithful, cited Obsidian notes from any video lecture: timestamped transcripts, key frames, and a checker."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
+license-files = ["LICENSE"]
 dependencies = ["pillow>=10", "imagehash>=4.3", "yt-dlp[default]>=2025.1"]
 
 [project.optional-dependencies]
