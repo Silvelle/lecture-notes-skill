@@ -28,6 +28,14 @@ This writes a **Lecture bundle**:
 The language is detected automatically; pass `--lang ru` (or any code) to override it.
 `--min-frame-interval SECONDS` changes the 30 s minimum; `--no-frames` skips Key frames.
 
+## Check a Lecture note
+
+```bash
+lecture-notes verify note.md lecture-bundle          # add --json for machine-readable output
+```
+
+The Faithfulness check: every idea line in the note must cite a timestamp (`[12:34]`) or embed a Key frame (`![[frame_000754.jpg]]`) that really exists in the bundle. Exit code 0 means pass, 1 means problems, 2 means the note or bundle couldn't be read. See [docs/verify.md](docs/verify.md).
+
 ## Develop
 
 ```bash
