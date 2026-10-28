@@ -2,9 +2,9 @@
 
 Faithful, cited Obsidian notes from any video lecture.
 
-Give it a YouTube link or a video file. You get one Obsidian note. Every idea in it points to the second it was said or the frame it was shown. A program checks that, so nothing made up gets through.
+Give it a YouTube link or a video file. Get one Obsidian note. Every idea links to its second in the video. A program checks each link.
 
-It works with Claude Code, Codex, Gemini CLI, Cursor and any agent that reads `SKILL.md`. No API key. No cloud transcription.
+Works with Claude Code, Codex, Gemini CLI and Cursor. No API key. No cloud.
 
 ## Installation (2-minute setup)
 
@@ -14,18 +14,18 @@ It works with Claude Code, Codex, Gemini CLI, Cursor and any agent that reads `S
 pipx install 'lecture-notes[whisper]'
 ```
 
-`pip install 'lecture-notes[whisper]'` and `uvx --from 'lecture-notes[whisper]' lecture-notes` work too. You also need [ffmpeg](https://ffmpeg.org). For YouTube, install [deno](https://deno.land) too.
+`pip` and `uvx` work too. You also need [ffmpeg](https://ffmpeg.org). For YouTube, add [deno](https://deno.land).
 
 <details>
 <summary><strong>Extras</strong></summary>
 
 | Extra | Adds |
 | ----- | ---- |
-| `whisper` | Local speech recognition (faster-whisper). Recommended. |
-| `ru` | GigaAM v3 for Russian lectures (onnx-asr). |
-| `ocr` | Text from slides and boards (tesseract). Also install `tesseract-ocr`. |
+| `whisper` | Local speech recognition. Recommended. |
+| `ru` | GigaAM v3 for Russian lectures. |
+| `ocr` | Text from slides. Needs `tesseract-ocr`. |
 
-Combine them: `pipx install 'lecture-notes[whisper,ru,ocr]'`.
+Combine: `pipx install 'lecture-notes[whisper,ru,ocr]'`.
 
 </details>
 
@@ -73,7 +73,7 @@ gemini skills install https://github.com/Silvelle/lecture-notes-skill.git --path
 npx skills@latest add Silvelle/lecture-notes-skill -a cursor
 ```
 
-Or copy `skills/lecture-notes/` into your agent's skills folder.
+Or copy `skills/lecture-notes/` to your skills folder.
 
 </details>
 
@@ -83,27 +83,27 @@ Or copy `skills/lecture-notes/` into your agent's skills folder.
 lecture-notes doctor
 ```
 
-It shows your hardware, the model it will use, and anything missing.
+Shows your hardware, the chosen model, and what's missing.
 
 ## Why Lecture Notes
 
 ### #1: Auto-captions garble code
 
-**The Problem.** Code read aloud becomes nonsense. `else: print("a is not 1")` turns into "els Принт А из нот единица". Formulas and slides are not spoken at all.
+**The Problem.** Spoken code turns to nonsense. `else: print("a is not 1")` becomes "els Принт А из нот единица". Slides are never spoken.
 
-**The Fix.** Human subtitles come first. Otherwise a local speech model runs. Key frames capture every slide change. The agent copies code from the frame, not from the speech.
+**The Fix.** Human subtitles first, then a local model. Every slide change is saved as a Key frame. Code is copied from the frame.
 
 ### #2: AI summaries invent things
 
-**The Problem.** A summary reads well. But some of it the lecturer never said. You can't tell which part.
+**The Problem.** A summary reads well. Some of it was never said. You can't tell which part.
 
-**The Fix.** Every idea carries a Citation: a timestamp or a Key frame. `lecture-notes verify` checks each one against the bundle. The skill only finishes when `verify` passes. Unreadable parts get an `[unclear]` marker instead of a guess.
+**The Fix.** Every idea cites a timestamp or a Key frame. `verify` checks each one. The skill stops only when it passes. Unreadable parts get `[unclear]`, not a guess.
 
 ### #3: Transcription freezes the laptop
 
-**The Problem.** A big model on a weak machine runs for hours at full fan.
+**The Problem.** A big model on a weak laptop runs for hours.
 
-**The Fix.** The tool picks a model for your hardware. It shows an estimate first. On CPU it asks before a long job. It leaves half your cores free.
+**The Fix.** The model fits your hardware. You see an estimate first. Long CPU jobs ask first. Half your cores stay free.
 
 ## How it works
 
@@ -112,14 +112,14 @@ Source ──extract──▶ Lecture bundle ──agent──▶ Lecture note �
 (URL/file)          transcript + frames       (Obsidian)              (exit 0)
 ```
 
-1. `extract` builds the **Lecture bundle**: `manifest.json`, `transcript.json`, `transcript.md` and `frames/`.
-2. The agent reads all of it, including every Key frame image.
-3. The agent writes one note in [this format](skills/lecture-notes/note-format.md), or the [full text](skills/lecture-notes/full-text-format.md). Key frames go to `attachments/<lecture>/` in your vault.
-4. `verify` checks every Citation. The agent fixes and re-runs until it passes.
+1. `extract` builds the **Lecture bundle**: transcript, frames, manifest.
+2. The agent reads it all, images too.
+3. The agent writes a [note](skills/lecture-notes/note-format.md) or the [full text](skills/lecture-notes/full-text-format.md).
+4. `verify` checks it. The agent fixes until it passes.
 
-The package itself never calls an LLM ([ADR-0001](docs/adr/0001-no-llm-calls-in-package.md)).
+The CLI never calls an LLM ([ADR-0001](docs/adr/0001-no-llm-calls-in-package.md)).
 
-**No agent? You still get the whole Lecture.** `transcript.md` is the full text on one page. Each slide image sits where it appeared. With the `ocr` extra, the slide's text is under the image.
+**No agent? You still get the whole Lecture.** `transcript.md` is the full text with each slide in place. With `ocr`, slide text sits under each image.
 
 ## The CLI
 
@@ -136,14 +136,14 @@ lecture-notes doctor
 
 | Option | What it does |
 | ------ | ------------ |
-| `--lang ru` | Set the spoken language instead of detecting it. |
-| `--model`, `--device` | Override the automatic model choice. |
+| `--lang ru` | Set the language. |
+| `--model`, `--device` | Pick the model yourself. |
 | `--backend` | `faster-whisper` or `onnx-asr`. |
-| `--yes` | Skip the question before a long CPU job. |
-| `--allow-auto-subs` | Use the site's auto-captions instead of local recognition. |
+| `--yes` | Don't ask before long CPU jobs. |
+| `--allow-auto-subs` | Use the site's auto-captions. |
 | `--no-frames` | Transcript only. |
-| `--min-frame-interval 30` | At least one Key frame this often. |
-| `--cookies-from-browser firefox` | Use your browser login. See below. |
+| `--min-frame-interval 30` | A frame at least this often. |
+| `--cookies-from-browser firefox` | Use your browser login. |
 
 </details>
 
@@ -151,11 +151,11 @@ lecture-notes doctor
 
 1. Human-written subtitles.
 2. Local speech recognition.
-3. Auto-generated subtitles, only when allowed or when nothing else works.
+3. Auto-captions, as a last resort.
 
 The Manifest records which one was used.
 
-**`verify`** exits 0 on pass, 1 on problems, 2 if it can't read the files. `--full` also flags speech a full-text note leaves out. The rules and JSON format are in [docs/verify.md](docs/verify.md).
+**`verify`** exits 0 on pass, 1 on problems, 2 on unreadable files. `--full` also flags missing speech. Details: [docs/verify.md](docs/verify.md).
 
 ## Requirements & performance
 
@@ -170,22 +170,22 @@ Python 3.11 or newer, ffmpeg, and deno for YouTube.
 | CPU only | small, int8 | ~25 min |
 | Russian + `[ru]` extra | GigaAM v3 | ~6 min on CPU |
 
-These are estimates from the backends' benchmarks. Measured numbers are coming. RTX 50-series cards always use float16.
+Estimates from benchmarks; measured numbers coming. RTX 50-series uses float16.
 
 ## YouTube blocked me
 
-YouTube sometimes says "Sign in to confirm you're not a bot". This happens most on servers and VPNs. You have three ways out:
+YouTube sometimes asks you to "confirm you're not a bot". Mostly on servers and VPNs. Three ways out:
 
-- **Use your browser login.** Pass `--cookies-from-browser firefox` (or `chrome`, `firefox:profile`). Cookies are never read without this flag. Your Google account could get flagged. Use a second account if you can.
-- **Use a local file.** Download the video another way and pass the file.
-- **Take the transcript only.** If only the video is blocked, `extract` makes a transcript-only bundle on its own.
+- **Use your browser login.** Pass `--cookies-from-browser firefox`. Cookies are never read without it. Your account could get flagged. Use a spare one.
+- **Use a local file.** Download the video yourself.
+- **Take the transcript only.** If only the video is blocked, you still get the text.
 
 ## How it differs
 
-- **Checked, not promised.** `verify` tests every Citation against the lecture.
-- **Board content.** Code, slides and formulas come from Key frames, not speech.
-- **Any language.** Mixed Russian and English works. Code is never translated.
-- **Safe defaults.** Fits the model to your machine. Asks before long CPU jobs.
+- **Checked, not promised.** `verify` tests every Citation.
+- **Board content.** Code and formulas come from the frames.
+- **Any language.** Mixed Russian and English works.
+- **Safe defaults.** Fits your machine. Asks before long jobs.
 - **Obsidian native.** Frontmatter, `[[links]]`, embedded frames.
 
 ## Develop
@@ -199,11 +199,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Use it as a Claude skill
 
-After step 2, ask your agent in plain words:
+Ask your agent in plain words:
 
 > Make notes from https://www.youtube.com/watch?v=1GLDLn-HQe8
 
-Or call the skill directly. In Claude Code, a skill from a plugin carries the plugin's name:
+Or call it directly. Plugin skills carry the plugin's name:
 
 ```text
 /lecture-notes:lecture-notes https://www.youtube.com/watch?v=1GLDLn-HQe8
@@ -211,14 +211,14 @@ Or call the skill directly. In Claude Code, a skill from a plugin carries the pl
 /lecture-notes:lecture-notes https://youtu.be/… in English
 ```
 
-If you copied the skill into `~/.claude/skills/` instead, it is just `/lecture-notes`.
+Copied into `~/.claude/skills/`? Then it's just `/lecture-notes`.
 
-**Want everything, not a summary?** Ask for the full text:
+**Want everything, not a summary?** Add `full`:
 
 ```text
 /lecture-notes:lecture-notes https://www.youtube.com/watch?v=1GLDLn-HQe8 full
 ```
 
-You get every sentence in order. Each slide, code block and formula sits where it was shown, copied from the image. `verify --full` checks that nothing was made up and nothing was left out.
+You get every sentence in order. Slides, code and formulas sit where they were shown. `verify --full` checks nothing was added or left out.
 
-The skill runs `extract`, reads the bundle, writes the note into your vault, and runs `verify` until it passes. It stops and asks you before a long CPU job or before using browser cookies.
+The skill extracts, writes, and verifies until it passes. It asks before long CPU jobs and before using cookies.

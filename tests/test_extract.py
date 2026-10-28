@@ -165,8 +165,10 @@ def test_missing_whisper_extra_is_a_one_line_error(
 
 
 def test_transcript_markdown_shows_each_key_frame_where_it_appears(
-    lecture_file: Path, tmp_path: Path, fake_transcriber: FakeTranscriber
+    lecture_file: Path, tmp_path: Path, fake_transcriber: FakeTranscriber,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setitem(sys.modules, "pytesseract", None)  # OCR text has its own test
     bundle = tmp_path / "bundle"
 
     main(["extract", str(lecture_file), "-o", str(bundle)], transcriber_factory=fake_transcriber)
