@@ -19,7 +19,9 @@ PARAGRAPH_SPAN = 60.0  # longest a paragraph runs before a new timestamp
 def write(
     out_dir: Path,
     *,
-    source: Path,
+    source: dict[str, str],
+    title: str,
+    channel: str | None,
     duration: float,
     transcription: Transcription,
     language_overridden: bool,
@@ -31,8 +33,9 @@ def write(
         {
             "schema_version": SCHEMA_VERSION,
             "tool_version": __version__,
-            "source": {"kind": "local_file", "path": str(source.resolve())},
-            "title": source.stem,
+            "source": source,
+            "title": title,
+            "channel": channel,
             "duration": round(duration, 3),
             "language": transcription.language,
             "language_origin": "user" if language_overridden else "detected",
@@ -48,7 +51,7 @@ def write(
         {"language": transcription.language, "segments": [asdict(s) for s in transcription.segments]},
     )
     (out_dir / "transcript.md").write_text(
-        transcript_markdown(source.stem, transcription.segments), encoding="utf-8"
+        transcript_markdown(title, transcription.segments), encoding="utf-8"
     )
 
 

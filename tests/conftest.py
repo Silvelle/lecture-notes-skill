@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+from lecture_notes.sources import LectureInfo, SourceBlocked
 from lecture_notes.transcriber import Segment, Transcription
 from tests.fixture_lecture import make_lecture
 
@@ -49,3 +51,41 @@ def fake_transcriber() -> FakeTranscriber:
 
 def read_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+@dataclass
+class FakeDownloader:
+    """In-memory downloader: serves a fixture Lecture as if it came from a URL."""
+
+    video: Path | None
+    info_result: LectureInfo = field(
+        default_factory=lambda: LectureInfo(
+            url="https://www.youtube.com/watch?v=abc123",
+            title="Python basics",
+            channel="MEPhI",
+            duration=6.0,
+            language="en",
+        )
+    )
+    blocked: SourceBlocked | None = None
+    video_blocked: SourceBlocked | None = None
+    requested: list[str] = field(default_factory=list)
+
+    def info(self, url: str) -> LectureInfo:
+        self.requested.append(url)
+        if self.blocked:
+            raise self.blocked
+        return self.info_result
+
+    def download_video(self, url: str, directory: Path) -> Path:
+        if self.blocked or self.video_blocked:
+            raise self.blocked or self.video_blocked  # type: ignore[misc]
+        assert self.video is not None
+        target = directory / "video.mp4"
+        shutil.copy(self.video, target)
+        return target
+
+
+@pytest.fixture
+def fake_downloader(lecture_file: Path) -> FakeDownloader:
+    return FakeDownloader(video=lecture_file)
