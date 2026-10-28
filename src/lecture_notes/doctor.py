@@ -5,7 +5,7 @@ from __future__ import annotations
 import importlib.util
 import shutil
 
-from lecture_notes import hardware
+from lecture_notes import hardware, ocr
 from lecture_notes.hardware import DeviceReport
 
 JS_RUNTIMES = ("deno", "node", "bun")
@@ -29,7 +29,22 @@ def report(device_report: DeviceReport | None = None) -> tuple[list[str], bool]:
     lines.append(_line("faster-whisper", _module_status(
         "faster_whisper", "speech recognition; pip install 'lecture-notes[whisper]'"
     )))
+    lines.append(_line("tesseract", _tesseract_status()))
     return lines, ffmpeg_ok
+
+
+def _tesseract_status() -> str:
+    if shutil.which("tesseract") is None:
+        return "missing (optional OCR of Key frames): install tesseract-ocr"
+    languages = ocr.installed_languages()
+    status = f"ok ({', '.join(languages)})"
+    if "eng" not in languages:
+        status += "; missing English: install tesseract-ocr-eng"
+    if "rus" not in languages:
+        status += "; more languages: install tesseract-ocr-rus (or your Lecture's language)"
+    if importlib.util.find_spec("pytesseract") is None:
+        status += "; pip install 'lecture-notes[ocr]'"
+    return status
 
 
 def _gpu_detail(report: DeviceReport) -> str:

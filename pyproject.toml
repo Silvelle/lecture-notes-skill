@@ -12,6 +12,7 @@ license = "MIT"
 dependencies = ["pillow>=10", "imagehash>=4.3", "yt-dlp[default]>=2025.1"]
 
 [project.optional-dependencies]
+ocr = ["pytesseract>=0.3.10"]
 whisper = ["faster-whisper>=1.1", "numpy", "nvidia-ml-py>=12"]
 
 [project.scripts]
@@ -30,5 +31,5 @@ strict = true
 files = ["src", "tests"]
 
 [[tool.mypy.overrides]]
-module = ["faster_whisper.*", "ctranslate2.*", "numpy.*", "imagehash.*", "yt_dlp.*", "pynvml.*"]
+module = ["faster_whisper.*", "ctranslate2.*", "numpy.*", "imagehash.*", "yt_dlp.*", "pynvml.*", "pytesseract.*"]
 ignore_missing_imports = true

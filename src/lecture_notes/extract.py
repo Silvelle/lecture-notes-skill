@@ -9,7 +9,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from lecture_notes import bundle, frames, hardware, media
+from lecture_notes import bundle, frames, hardware, media, ocr
 from lecture_notes.errors import LectureNotesError
 from lecture_notes.sources import (
     Downloader,
@@ -104,6 +104,7 @@ def extract(
             key_frames = frames.extract_key_frames(
                 fetched.video, out_dir, duration=fetched.duration, min_interval=min_frame_interval
             )
+            key_frames = ocr.add_text(key_frames, out_dir, transcription.language)
     recognised = origin == LOCAL_SPEECH_RECOGNITION
     bundle.write(out_dir, source=fetched.source_entry, title=fetched.title,
                  channel=fetched.channel, duration=fetched.duration,

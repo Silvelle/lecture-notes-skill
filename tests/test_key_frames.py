@@ -72,7 +72,7 @@ def test_no_frames_option_skips_key_frames_and_the_manifest_says_so(
     main(["extract", str(lecture_file), "-o", str(bundle), "--no-frames"], transcriber_factory=fake_transcriber)
 
     assert read_json(bundle / "manifest.json")["key_frames"] == {
-        "status": "skipped", "min_interval": None, "frames": [],
+        "status": "skipped", "min_interval": None, "frames": [], "ocr_languages": None,
     }
     assert not (bundle / "frames").exists()
     assert (bundle / "transcript.json").is_file()
@@ -92,7 +92,7 @@ def test_audio_only_source_gets_a_bundle_without_key_frames(
     assert main(["extract", str(audio), "-o", str(bundle)], transcriber_factory=fake_transcriber) == 0
 
     assert read_json(bundle / "manifest.json")["key_frames"] == {
-        "status": "no_video", "min_interval": None, "frames": [],
+        "status": "no_video", "min_interval": None, "frames": [], "ocr_languages": None,
     }
 
 

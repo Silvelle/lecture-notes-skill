@@ -33,6 +33,7 @@ _PTS_TIME = re.compile(r"pts_time:\s*([0-9.]+)")
 class KeyFrame:
     time: float
     file: str  # relative to the bundle folder
+    ocr_text: str | None = None  # recognised text file, relative to the bundle folder
 
 
 @dataclass(frozen=True)
@@ -41,6 +42,7 @@ class KeyFrames:
     status: Literal["extracted", "skipped", "no_video", "video_blocked"]
     min_interval: float | None
     frames: list[KeyFrame]
+    ocr_languages: list[str] | None = None  # tesseract packs used; None: no OCR
 
 
 SKIPPED = KeyFrames(status="skipped", min_interval=None, frames=[])
@@ -90,7 +92,7 @@ def remove_key_frames(bundle_dir: Path) -> None:
     frames_dir = bundle_dir / "frames"
     if not frames_dir.is_dir():
         return
-    for old in frames_dir.glob("frame_*.jpg"):
+    for old in [*frames_dir.glob("frame_*.jpg"), *frames_dir.glob("frame_*.txt")]:
         old.unlink()
     if not any(frames_dir.iterdir()):
         frames_dir.rmdir()

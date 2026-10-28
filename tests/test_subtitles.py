@@ -103,7 +103,9 @@ def test_blocked_video_with_subtitles_gives_a_transcript_only_bundle(
     manifest = read_json(bundle / "manifest.json")
     assert code == 0
     assert manifest["transcript_origin"] == "auto_subtitles"
-    assert manifest["key_frames"] == {"status": "video_blocked", "min_interval": None, "frames": []}
+    assert manifest["key_frames"] == {
+        "status": "video_blocked", "min_interval": None, "frames": [], "ocr_languages": None,
+    }
     assert manifest["duration"] == 6.0  # from the site's metadata
     assert not (bundle / "frames").exists()
 
