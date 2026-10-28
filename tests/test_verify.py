@@ -295,3 +295,52 @@ def test_an_unreadable_note_or_bundle_exits_2_with_one_line(
     assert exit_code == 2
     assert captured.out == ""
     assert captured.err.startswith("lecture-notes: error:") and captured.err.count("\n") == 1
+
+
+def run_full_verify(tmp_path: Path, note: str, capsys: pytest.CaptureFixture[str],
+                    segments: list[tuple[float, float]]) -> tuple[int, dict[str, Any]]:
+    note_path = tmp_path / "note.md"
+    note_path.write_text(note, encoding="utf-8")
+    bundle_dir = write_bundle(tmp_path / "bundle")
+    transcript = {"segments": [{"start": a, "end": b, "text": "..."} for a, b in segments]}
+    (bundle_dir / "transcript.json").write_text(json.dumps(transcript), encoding="utf-8")
+    exit_code = main(["verify", str(note_path), str(bundle_dir), "--full", "--json"])
+    return exit_code, json.loads(capsys.readouterr().out)
+
+
+# Speech from 0 to 300 s in 30 s segments.
+CONTINUOUS = [(float(t), t + 30.0) for t in range(0, 300, 30)]
+
+
+def test_full_mode_passes_when_citations_cover_all_speech(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    note = "".join(f"Paragraph [{t // 60:02d}:{t % 60:02d}]\n" for t in range(0, 300, 60))
+
+    exit_code, report = run_full_verify(tmp_path, note, capsys, CONTINUOUS)
+
+    assert report == {"ok": True, "problems": []}
+    assert exit_code == 0
+
+
+def test_full_mode_flags_speech_the_note_leaves_out(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Cites 0:00 and 4:00 only: speech from about 1:30 to 4:00 is missing.
+    note = "Start [00:00]\nEnd [04:00]\n"
+
+    exit_code, report = run_full_verify(tmp_path, note, capsys, CONTINUOUS)
+
+    assert exit_code == 1
+    assert [(p["line"], p["problem"]) for p in report["problems"]] == [(0, "uncovered_speech")]
+    assert "01:30" in report["problems"][0]["message"]
+    assert "04:00" in report["problems"][0]["message"]
+
+
+def test_without_full_a_short_note_is_fine(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    note_path = tmp_path / "note.md"
+    note_path.write_text("Start [00:00]\n", encoding="utf-8")
+
+    assert main(["verify", str(note_path), str(write_bundle(tmp_path / "bundle"))]) == 0

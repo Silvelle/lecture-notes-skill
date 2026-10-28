@@ -41,10 +41,12 @@ def test_every_file_the_skill_links_exists() -> None:
         assert (SKILL_DIR / target).is_file(), target
 
 
-def test_the_example_note_in_the_format_passes_verify(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+@pytest.mark.parametrize("format_file, extra", [("note-format.md", []),
+                                                ("full-text-format.md", ["--full"])])
+def test_the_example_in_each_format_passes_verify(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], format_file: str, extra: list[str]
 ) -> None:
-    text = (SKILL_DIR / "note-format.md").read_text(encoding="utf-8")
+    text = (SKILL_DIR / format_file).read_text(encoding="utf-8")
     example = re.search(r"````markdown\n(.*?)\n````", text, re.DOTALL)
     assert example
     note = tmp_path / "note.md"
@@ -55,12 +57,14 @@ def test_the_example_note_in_the_format_passes_verify(
         "duration": 9730.0,
         "key_frames": {"frames": [{"time": 760.2, "file": "frames/frame_000760.jpg"}]},
     }), encoding="utf-8")
+    segments = [(754.0, 770.0), (770.0, 790.0)]
+    if format_file == "note-format.md":
+        segments.append((3910.0, 3920.0))
     (bundle / "transcript.json").write_text(json.dumps({"segments": [
-        {"start": 754.0, "end": 770.0, "text": "..."},
-        {"start": 3910.0, "end": 3920.0, "text": "..."},
+        {"start": start, "end": end, "text": "..."} for start, end in segments
     ]}), encoding="utf-8")
 
-    exit_code = main(["verify", str(note), str(bundle), "--json"])
+    exit_code = main(["verify", str(note), str(bundle), "--json", *extra])
 
     assert json.loads(capsys.readouterr().out) == {"ok": True, "problems": []}
     assert exit_code == 0

@@ -66,6 +66,8 @@ def main(
     verify_cmd.add_argument("note", type=Path, help="the Lecture note (Markdown)")
     verify_cmd.add_argument("bundle", type=Path, help="the Lecture bundle folder")
     verify_cmd.add_argument("--json", action="store_true", help="machine-readable output")
+    verify_cmd.add_argument("--full", action="store_true",
+                            help="the note is the full text: also flag speech it leaves out")
 
     commands.add_parser("doctor", help="show what this machine can do")
 
@@ -75,7 +77,7 @@ def main(
         print("\n".join(lines))
         return 0 if ready else 1
     if args.command == "verify":
-        return _verify(args.note, args.bundle, as_json=args.json)
+        return _verify(args.note, args.bundle, as_json=args.json, full=args.full)
     try:
         bundle = extract(
             args.source,
@@ -100,7 +102,7 @@ def main(
     return 0
 
 
-def _verify(note: Path, bundle: Path, *, as_json: bool) -> int:
+def _verify(note: Path, bundle: Path, *, as_json: bool, full: bool) -> int:
     """Exit 0: every idea cited. 1: problems in the note. 2: note or bundle unreadable."""
     try:
         text = note.read_text(encoding="utf-8")
@@ -108,7 +110,7 @@ def _verify(note: Path, bundle: Path, *, as_json: bool) -> int:
         errors.report(f"cannot read {note}")
         return 2
     try:
-        problems = verify(text, bundle)
+        problems = verify(text, bundle, full=full)
     except LectureNotesError as error:
         errors.report(str(error))
         return 2
@@ -117,7 +119,8 @@ def _verify(note: Path, bundle: Path, *, as_json: bool) -> int:
         print(json.dumps(report, ensure_ascii=False, indent=2))
     elif problems:
         for p in problems:
-            print(f"{note}:{p.line}: {p.problem}: {p.message}")
+            where = f"{note}:{p.line}" if p.line else str(note)
+            print(f"{where}: {p.problem}: {p.message}")
             print(f"    suggestion: {p.suggestion}")
         print(f"{len(problems)} problem{'s' if len(problems) != 1 else ''}")
     else:

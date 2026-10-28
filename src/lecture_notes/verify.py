@@ -38,6 +38,9 @@ COMMENTS = {"<!--": "-->", "%%": "%%"}
 # How far a timestamp may sit from a Transcript segment or Key frame. Citations are
 # written to the second and segments can start a moment after the idea begins.
 NEARBY_SECONDS = 5.0
+# --full: the longest stretch of speech a Citation may stand for. Transcript paragraphs
+# run at most a minute, so a note that keeps them all stays well inside this.
+COVERAGE_GAP_SECONDS = 90.0
 IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp")
 
 
@@ -49,6 +52,7 @@ class ProblemCode(StrEnum):
     TIMESTAMP_NOT_NEAR_CONTENT = "timestamp_not_near_content"
     LINK_TIME_MISMATCH = "link_time_mismatch"
     UNKNOWN_FRAME = "unknown_frame"
+    UNCOVERED_SPEECH = "uncovered_speech"  # --full only; reported on line 0 (whole note)
 
 
 @dataclass(frozen=True)
@@ -65,6 +69,7 @@ class _Bundle:
     segments: list[tuple[float, float]]
     frame_times: list[float]
     frame_names: frozenset[str]
+    frame_time_by_name: dict[str, float]
 
     @classmethod
     def load(cls, directory: Path) -> _Bundle:
@@ -77,6 +82,7 @@ class _Bundle:
                 segments=[(float(s["start"]), float(s["end"])) for s in transcript["segments"]],
                 frame_times=[float(f["time"]) for f in frames],
                 frame_names=frozenset(Path(f["file"]).name for f in frames),
+                frame_time_by_name={Path(f["file"]).name: float(f["time"]) for f in frames},
             )
         except (KeyError, TypeError, ValueError, AttributeError):
             raise LectureNotesError(f"{directory} is not a valid Lecture bundle") from None
@@ -88,11 +94,13 @@ class _Bundle:
         )
 
 
-def verify(note: str, bundle_dir: Path) -> list[Problem]:
-    """Problems in the Lecture note, in line order. Raises LectureNotesError if the
-    bundle can't be read."""
+def verify(note: str, bundle_dir: Path, *, full: bool = False) -> list[Problem]:
+    """Problems in the Lecture note, in line order. With `full`, also every stretch of
+    speech no Citation covers. Raises LectureNotesError if the bundle can't be read."""
     bundle = _Bundle.load(bundle_dir)
     problems: list[Problem] = []
+    if full:
+        problems.extend(_uncovered_speech(note, bundle))
     for line_number, text in _idea_lines(note):
         problems.extend(_check_timestamps(line_number, text, bundle))
         images = _embedded_images(text)
@@ -119,10 +127,50 @@ def verify(note: str, bundle_dir: Path) -> list[Problem]:
     return problems
 
 
+def _uncovered_speech(note: str, bundle: _Bundle) -> Iterator[Problem]:
+    """Stretches of speech with no Citation within COVERAGE_GAP_SECONDS before them."""
+    cited: list[float] = []
+    for _, text in _idea_lines(note):
+        cited.extend(_seconds(match) for match in TIMESTAMP.finditer(text))
+        cited.extend(bundle.frame_time_by_name[name] for name in
+                     (Path(image).name for image in _embedded_images(text))
+                     if name in bundle.frame_time_by_name)
+    cited.sort()
+    gap_start: float | None = None
+    gap_end = 0.0
+    for start, end in sorted(bundle.segments):
+        before = [c for c in cited if c <= start + NEARBY_SECONDS]
+        if before and start - before[-1] <= COVERAGE_GAP_SECONDS:
+            if gap_start is not None:
+                yield _uncovered(gap_start, gap_end)
+                gap_start = None
+            continue
+        if gap_start is None:
+            gap_start = before[-1] + COVERAGE_GAP_SECONDS if before else start
+        gap_end = end
+    if gap_start is not None:
+        yield _uncovered(gap_start, gap_end)
+
+
+def _uncovered(start: float, end: float) -> Problem:
+    return Problem(
+        line=0,
+        problem=ProblemCode.UNCOVERED_SPEECH,
+        message=f"no Citation covers the speech from {format_timestamp(start)} "
+        f"to {format_timestamp(end)}; the note may leave it out",
+        suggestion="add the Transcript paragraphs from that stretch, each with its timestamp",
+    )
+
+
+def _seconds(match: re.Match[str]) -> int:
+    hours, minutes, seconds = match.group(1), match.group(2), match.group(3)
+    return int(hours or 0) * 3600 + int(minutes) * 60 + int(seconds)
+
+
 def _check_timestamps(line_number: int, text: str, bundle: _Bundle) -> Iterator[Problem]:
     for match in TIMESTAMP.finditer(text):
-        hours, minutes, seconds, link = match.groups()
-        time = int(hours or 0) * 3600 + int(minutes) * 60 + int(seconds)
+        link = match.group(4)
+        time = _seconds(match)
         label = match.group(0).split("]")[0] + "]"
         link_time = _link_time(link or "")
         if link_time is not None and link_time != time:

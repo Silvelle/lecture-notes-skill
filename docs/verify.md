@@ -1,8 +1,10 @@
 # `verify`: the Faithfulness check
 
 ```bash
-lecture-notes verify <note.md> <bundle> [--json]
+lecture-notes verify <note.md> <bundle> [--json] [--full]
 ```
+
+`--full` is for a full-text note (everything said, in order): it also flags speech the note leaves out.
 
 Checks a Lecture note against its Lecture bundle: every idea must carry a Citation, and every Citation must point at something that is really in the bundle.
 
@@ -51,6 +53,7 @@ An **Unclear marker**, `[unclear]` or `[unclear: reason]`, marks a place where t
 | `timestamp_not_near_content` | No Transcript segment or Key frame lies within 5 s of the timestamp |
 | `link_time_mismatch` | A linked timestamp's `t=` differs from its label |
 | `unknown_frame` | An embedded image is not a Key frame listed in the bundle's `manifest.json` |
+| `uncovered_speech` | `--full` only. A stretch of speech has no Citation within 90 s before it. Reported on `line` 0, meaning the whole note |
 
 The codes are stable. New codes may be added; existing ones won't change meaning.
 
@@ -72,7 +75,7 @@ The codes are stable. New codes may be added; existing ones won't change meaning
 
 - `ok`: `true` exactly when `problems` is empty (exit code 0)
 - `problems`: in line order. A line can have several problems
-- `line`: 1-based line number in the note
+- `line`: 1-based line number in the note; 0 for problems about the whole note
 - `problem`: one of the codes above
 - `message`, `suggestion`: human-readable text; don't parse it
 

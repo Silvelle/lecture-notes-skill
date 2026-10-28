@@ -114,7 +114,7 @@ Source ──extract──▶ Lecture bundle ──agent──▶ Lecture note �
 
 1. `extract` builds the **Lecture bundle**: `manifest.json`, `transcript.json`, `transcript.md` and `frames/`.
 2. The agent reads all of it, including every Key frame image.
-3. The agent writes one note in [this format](skills/lecture-notes/note-format.md). Key frames go to `attachments/<lecture>/` in your vault.
+3. The agent writes one note in [this format](skills/lecture-notes/note-format.md), or the [full text](skills/lecture-notes/full-text-format.md). Key frames go to `attachments/<lecture>/` in your vault.
 4. `verify` checks every Citation. The agent fixes and re-runs until it passes.
 
 The package itself never calls an LLM ([ADR-0001](docs/adr/0001-no-llm-calls-in-package.md)).
@@ -127,6 +127,7 @@ The package itself never calls an LLM ([ADR-0001](docs/adr/0001-no-llm-calls-in-
 lecture-notes extract "https://www.youtube.com/watch?v=…" -o bundle
 lecture-notes extract lecture.mp4 -o bundle
 lecture-notes verify note.md bundle --json
+lecture-notes verify full-text.md bundle --full
 lecture-notes doctor
 ```
 
@@ -154,7 +155,7 @@ lecture-notes doctor
 
 The Manifest records which one was used.
 
-**`verify`** exits 0 on pass, 1 on problems, 2 if it can't read the files. The rules and JSON format are in [docs/verify.md](docs/verify.md).
+**`verify`** exits 0 on pass, 1 on problems, 2 if it can't read the files. `--full` also flags speech a full-text note leaves out. The rules and JSON format are in [docs/verify.md](docs/verify.md).
 
 ## Requirements & performance
 
@@ -211,5 +212,13 @@ Or call the skill directly. In Claude Code, a skill from a plugin carries the pl
 ```
 
 If you copied the skill into `~/.claude/skills/` instead, it is just `/lecture-notes`.
+
+**Want everything, not a summary?** Ask for the full text:
+
+```text
+/lecture-notes:lecture-notes https://www.youtube.com/watch?v=1GLDLn-HQe8 full
+```
+
+You get every sentence in order. Each slide, code block and formula sits where it was shown, copied from the image. `verify --full` checks that nothing was made up and nothing was left out.
 
 The skill runs `extract`, reads the bundle, writes the note into your vault, and runs `verify` until it passes. It stops and asks you before a long CPU job or before using browser cookies.
