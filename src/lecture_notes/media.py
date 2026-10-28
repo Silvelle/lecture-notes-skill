@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import wave
 from pathlib import Path
+from typing import Any
 
 from lecture_notes.errors import LectureNotesError
 
@@ -48,3 +50,16 @@ def tool(name: str) -> str:
     if found is None:
         raise LectureNotesError(f"{name} not found on PATH; install ffmpeg (https://ffmpeg.org) and retry")
     return found
+
+
+def read_wav(path: Path) -> Any:
+    """16 kHz mono s16le WAV (from `extract_audio`) as float32 samples.
+
+    Backends get samples rather than a path: faster-whisper 1.2.1 opens files with an
+    argument newer PyAV releases reject.
+    """
+    import numpy as np
+
+    with wave.open(str(path), "rb") as wav:
+        frames = wav.readframes(wav.getnframes())
+    return np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0

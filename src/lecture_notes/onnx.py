@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from lecture_notes import media
 from lecture_notes.errors import LectureNotesError
 from lecture_notes.hardware import TranscriberChoice
 from lecture_notes.transcriber import Segment, Transcription
@@ -29,9 +30,14 @@ class OnnxAsrTranscriber:
         )
 
     def transcribe(self, audio: Path, language: str | None) -> Transcription:
+        import numpy as np
+
+        # The VAD only closes a speech segment on silence; without trailing silence the
+        # Lecture's last words would be dropped.
+        samples = np.concatenate([media.read_wav(audio), np.zeros(16000, dtype=np.float32)])
         segments = [
             Segment(start=round(r.start, 3), end=round(r.end, 3), text=r.text.strip())
-            for r in self._model.recognize(str(audio))
+            for r in self._model.recognize(samples)
             if r.text.strip()
         ]
         return Transcription(language=language or "ru", segments=segments,

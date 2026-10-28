@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import sys
-import wave
 from pathlib import Path
 from typing import Any
 
+from lecture_notes import media
 from lecture_notes.errors import LectureNotesError
 from lecture_notes.hardware import TranscriberChoice
 from lecture_notes.transcriber import Segment, Transcription
@@ -35,7 +35,7 @@ class FasterWhisperTranscriber:
         )
 
     def transcribe(self, audio: Path, language: str | None) -> Transcription:
-        samples = _read_wav(audio)
+        samples = media.read_wav(audio)
         try:
             return self._transcribe(samples, language)
         except RuntimeError as error:
@@ -60,16 +60,3 @@ class FasterWhisperTranscriber:
 def _is_missing_cuda_library(error: RuntimeError) -> bool:
     message = str(error).lower()
     return "cannot be loaded" in message and any(lib in message for lib in ("cublas", "cudnn", "cuda"))
-
-
-def _read_wav(path: Path) -> Any:
-    """16 kHz mono s16le WAV → float32 samples.
-
-    Decoding here instead of letting faster-whisper open the file keeps PyAV out of
-    the path; faster-whisper 1.2.1 passes an argument newer PyAV releases reject.
-    """
-    import numpy as np
-
-    with wave.open(str(path), "rb") as wav:
-        frames = wav.readframes(wav.getnframes())
-    return np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0
