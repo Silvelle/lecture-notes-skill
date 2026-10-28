@@ -203,7 +203,7 @@ def _confirm_heavy_work(recognition: _Recognition, audio_seconds: float) -> None
     """Show the estimate; on CPU, ask before a long job (or demand --yes off a terminal)."""
     choice = recognition.choice
     estimate = choice.estimate_seconds(audio_seconds)
-    print(f"Estimated transcription time: ~{_minutes(estimate)} for {_minutes(audio_seconds)} "
+    print(f"Estimated transcription time: ~{_duration(estimate)} for {_duration(audio_seconds)} "
           f"of audio with {choice.describe()}", file=sys.stderr)
     if recognition.assume_yes or choice.device != "cpu":
         return
@@ -219,8 +219,12 @@ def _confirm_heavy_work(recognition: _Recognition, audio_seconds: float) -> None
         raise LectureNotesError("stopped before transcription")
 
 
-def _minutes(seconds: float) -> str:
-    return f"{max(1, round(seconds / 60))} min"
+def _duration(seconds: float) -> str:
+    if seconds < 60:
+        return f"{round(seconds)} s"
+    if seconds < 3600:
+        return f"{round(seconds / 60)} min"
+    return f"{seconds / 3600:.1f} h"
 
 
 def _whisper_installed() -> bool:

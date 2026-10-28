@@ -106,7 +106,7 @@ def test_long_cpu_job_asks_first_and_stops_on_no(
 
     err = capsys.readouterr().err
     assert code == 1
-    assert "Estimated" in err
+    assert "Estimated transcription time: ~12 s for 6 s of audio" in err  # large-v3 on CPU: 2x
     assert fake_transcriber.calls == []
 
 
