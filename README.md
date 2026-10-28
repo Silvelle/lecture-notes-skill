@@ -4,6 +4,8 @@ Turn a video lecture into Obsidian notes you can trust.
 
 Give it a YouTube link or a video file. You get a note with the lecture's ideas. Every idea links to the second it was said. A checker makes sure of that, so nothing is made up.
 
+Any subject works, not only programming: math, physics, chemistry, history, languages. Formulas become LaTeX, diagrams stay as images, slide text becomes text.
+
 Works with Claude Code, Codex, Gemini CLI and Cursor. Runs on your computer. No API key.
 
 ## What you get
