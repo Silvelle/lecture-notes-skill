@@ -2,7 +2,7 @@
 name: lecture-notes
 description: Turn a video lecture (YouTube or any yt-dlp URL, or a local video file) into one faithful Obsidian Lecture note where every idea cites a timestamp or Key frame, checked by `lecture-notes verify`; or into its full text with the slides, code and formulas in place. Use when the user wants notes, a summary, a transcript or the full text of a lecture, talk, class or course video.
 license: MIT
-compatibility: Needs the `lecture-notes` CLI (pip install 'lecture-notes[whisper]'), ffmpeg, and a JS runtime such as deno for YouTube. The agent must be able to view images.
+compatibility: Needs the `lecture-notes` CLI (pipx install "lecture-notes[whisper] @ git+https://github.com/Silvelle/lecture-notes-skill"), ffmpeg, and a JS runtime such as deno for YouTube. The agent must be able to view images.
 ---
 
 # Lecture notes
@@ -22,7 +22,7 @@ If the request is empty or asks for help, show the user the Usage card at the en
 
 ## 2. Check the tool
 
-Run `lecture-notes doctor`. If the command is missing, install it with `pip install 'lecture-notes[whisper]'`. If `doctor` reports ffmpeg missing, or the JS runtime missing for a YouTube Source, tell the user what to install and stop.
+Run `lecture-notes doctor`. If the command is missing, install it with `pipx install "lecture-notes[whisper] @ git+https://github.com/Silvelle/lecture-notes-skill"` (or `pip install` with the same argument). If `doctor` reports ffmpeg missing, or the JS runtime missing for a YouTube Source, tell the user what to install and stop.
 
 ## 3. Find the vault
 

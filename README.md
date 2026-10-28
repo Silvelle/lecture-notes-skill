@@ -76,10 +76,10 @@ After installing pipx, run `pipx ensurepath` once and open a new terminal.
 ### 1. Install the tool
 
 ```bash
-pipx install 'lecture-notes[whisper]'
+pipx install "lecture-notes[whisper] @ git+https://github.com/Silvelle/lecture-notes-skill"
 ```
 
-`pip` and `uvx` work too.
+Not on PyPI yet, so it installs straight from GitHub. `pip install` works with the same argument.
 
 <details>
 <summary><strong>Optional extras</strong></summary>
@@ -90,7 +90,7 @@ pipx install 'lecture-notes[whisper]'
 | `ru` | A better model for Russian lectures. |
 | `ocr` | Slide text without an agent. Also install `tesseract-ocr`. |
 
-Combine them: `pipx install 'lecture-notes[whisper,ru,ocr]'`.
+Combine them: `pipx install "lecture-notes[whisper,ru,ocr] @ git+https://github.com/Silvelle/lecture-notes-skill"`.
 
 </details>
 
@@ -214,7 +214,7 @@ With the `ocr` extra, the text of each slide appears under its image too.
 1. Install the Russian extra:
 
    ```bash
-   pipx install --force 'lecture-notes[whisper,ru]'
+   pipx install --force "lecture-notes[whisper,ru] @ git+https://github.com/Silvelle/lecture-notes-skill"
    ```
 
 2. Ask as usual. Add `in Russian` if the video doesn't say its language.
@@ -264,7 +264,7 @@ pipx inject lecture-notes nvidia-cublas-cu12 nvidia-cudnn-cu12
 ```
 
 **"speech recognition needs faster-whisper".**
-Install the tool with the `whisper` extra: `pipx install --force 'lecture-notes[whisper]'`.
+Install the tool with the `whisper` extra: `pipx install --force "lecture-notes[whisper] @ git+https://github.com/Silvelle/lecture-notes-skill"`.
 
 **The language is wrong.**
 Say it in the request: `in Russian`, `in German`. Or pass `--lang ru` to `extract`.
