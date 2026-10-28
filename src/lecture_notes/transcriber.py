@@ -18,8 +18,8 @@ class Segment:
 class Transcription:
     language: str
     segments: list[Segment]
-    model: str
-    device: str
+    model: str | None  # None for subtitles
+    device: str | None
 
 
 class Transcriber(Protocol):

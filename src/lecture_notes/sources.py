@@ -8,6 +8,7 @@ from typing import Protocol
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from lecture_notes.errors import LectureNotesError
+from lecture_notes.transcriber import Segment
 
 # Query parameters that only say where to start playing; one Lecture is the whole video.
 TIME_PARAMETERS = {"t", "start", "time_continue"}
@@ -20,6 +21,8 @@ class LectureInfo:
     channel: str | None
     duration: float
     language: str | None
+    subtitle_languages: tuple[str, ...] = ()  # human-written subtitle tracks
+    auto_subtitle_languages: tuple[str, ...] = ()  # auto-generated (site speech recognition)
 
 
 class SourceBlocked(LectureNotesError):
@@ -34,6 +37,24 @@ class Downloader(Protocol):
     def download_video(self, url: str, directory: Path) -> Path:
         """Download the video into `directory` and return its path. Raises SourceBlocked."""
         ...
+
+    def fetch_subtitles(self, url: str, language: str, *, automatic: bool) -> list[Segment]:
+        """One subtitle track (a code from LectureInfo) as Transcript segments."""
+        ...
+
+
+def pick_subtitles(available: tuple[str, ...], language: str | None) -> str | None:
+    """The track in `language` (or a regional variant, or an auto track's `-orig`
+    original). With no known language, only an unambiguous single original track."""
+    if language:
+        for code in available:
+            if code == language or code == f"{language}-orig":
+                return code
+        return next((c for c in available if c.split("-")[0] == language), None)
+    originals = [c for c in available if c.endswith("-orig")]
+    if len(originals) == 1:
+        return originals[0]
+    return available[0] if len(available) == 1 else None
 
 
 def is_url(source: str) -> bool:

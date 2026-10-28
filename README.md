@@ -28,6 +28,14 @@ This writes a **Lecture bundle**:
 - `transcript.md`: the Transcript as readable paragraphs with timestamps
 - `frames/frame_<seconds>.jpg`: Key frames wherever the shown content changes (near-duplicates removed), plus at least one every 30 s
 
+For URL Sources the Transcript comes from, in order:
+
+1. **human-written subtitles** in the Lecture's language (no speech recognition needed)
+2. **local speech recognition** (faster-whisper)
+3. **auto-generated subtitles**, only with `--allow-auto-subs` or when local recognition isn't possible. They are fast but garble code and terms.
+
+The Manifest's `transcript_origin` says which one was used. If the site blocks the video but serves subtitles, you still get a transcript-only bundle (Key frame status `video_blocked`).
+
 The language is detected automatically; pass `--lang ru` (or any code) to override it.
 `--min-frame-interval SECONDS` changes the 30 s minimum; `--no-frames` skips Key frames.
 

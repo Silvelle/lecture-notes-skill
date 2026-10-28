@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import shutil
 from pathlib import Path
 from typing import Any
@@ -23,12 +24,44 @@ INFO = {
 }
 
 
+HUMAN_VTT = """WEBVTT
+Kind: captions
+Language: en
+
+00:00:00.000 --> 00:00:02.500
+Today: loops.
+
+00:00:02.500 --> 00:00:05.000 align:start position:0%
+A <i>for</i> loop
+repeats a block.
+"""
+
+# YouTube's auto captions: word timings, each line repeated in the next cue, 10 ms cues.
+AUTO_VTT = """WEBVTT
+Kind: captions
+Language: en
+
+00:00:00.000 --> 00:00:01.990 align:start position:0%
+today<00:00:00.500><c> loops</c>
+
+00:00:01.990 --> 00:00:02.000 align:start position:0%
+today loops
+
+00:00:02.000 --> 00:00:04.000 align:start position:0%
+today loops
+els<00:00:02.400><c> print</c><00:00:02.800><c> a</c>
+"""
+
+
 class StubYoutubeDL:
     """Records the options each YoutubeDL is built with; serves the fixture Lecture."""
 
     instances: list[dict[str, Any]] = []
     video: Path
     error: str | None = None
+    subtitles: dict[str, Any] = {}
+    automatic_captions: dict[str, Any] = {}
+    vtt: dict[str, str] = {}
 
     def __init__(self, params: dict[str, Any]) -> None:
         self.params = params
@@ -43,11 +76,16 @@ class StubYoutubeDL:
     def extract_info(self, url: str, download: bool = True) -> dict[str, Any]:
         if StubYoutubeDL.error:
             raise DownloadError(f"ERROR: [youtube] abc123: {StubYoutubeDL.error}")
+        info = {**INFO, "subtitles": StubYoutubeDL.subtitles,
+                "automatic_captions": StubYoutubeDL.automatic_captions}
         if not download:
-            return dict(INFO)
+            return info
         target = Path(self.params["outtmpl"].replace("%(ext)s", "mp4"))
         shutil.copy(StubYoutubeDL.video, target)
-        return {**INFO, "requested_downloads": [{"filepath": str(target)}]}
+        return {**info, "requested_downloads": [{"filepath": str(target)}]}
+
+    def urlopen(self, url: str) -> io.BytesIO:
+        return io.BytesIO(StubYoutubeDL.vtt[url].encode("utf-8"))
 
 
 @pytest.fixture
@@ -55,6 +93,9 @@ def stub_ytdlp(monkeypatch: pytest.MonkeyPatch, lecture_file: Path) -> type[Stub
     StubYoutubeDL.instances = []
     StubYoutubeDL.error = None
     StubYoutubeDL.video = lecture_file
+    StubYoutubeDL.subtitles = {}
+    StubYoutubeDL.automatic_captions = {}
+    StubYoutubeDL.vtt = {}
     monkeypatch.setattr(yt_dlp, "YoutubeDL", StubYoutubeDL)
     return StubYoutubeDL
 
@@ -118,3 +159,39 @@ def test_other_ytdlp_errors_are_one_line(
     err = capsys.readouterr().err
     assert exit_code == 1
     assert err.count("\n") == 1 and "Video unavailable" in err
+
+
+def track(url: str) -> list[dict[str, str]]:
+    return [{"ext": "json3", "url": url + ".json3"}, {"ext": "vtt", "url": url}]
+
+
+def test_human_subtitles_are_parsed_from_vtt(
+    tmp_path: Path, fake_transcriber: FakeTranscriber, stub_ytdlp: type[StubYoutubeDL]
+) -> None:
+    stub_ytdlp.subtitles = {"ru": track("https://subs/ru"), "live_chat": track("https://chat")}
+    stub_ytdlp.vtt = {"https://subs/ru": HUMAN_VTT}
+    bundle = tmp_path / "bundle"
+
+    assert main(["extract", URL, "-o", str(bundle)], transcriber=fake_transcriber) == 0
+
+    assert read_json(bundle / "manifest.json")["transcript_origin"] == "human_subtitles"
+    assert read_json(bundle / "transcript.json")["segments"] == [
+        {"start": 0.0, "end": 2.5, "text": "Today: loops."},
+        {"start": 2.5, "end": 5.0, "text": "A for loop repeats a block."},
+    ]
+
+
+def test_auto_subtitles_lose_youtubes_repeated_lines_and_word_timings(
+    tmp_path: Path, fake_transcriber: FakeTranscriber, stub_ytdlp: type[StubYoutubeDL]
+) -> None:
+    stub_ytdlp.automatic_captions = {"ru-orig": track("https://auto/ru"), "en": track("https://x")}
+    stub_ytdlp.vtt = {"https://auto/ru": AUTO_VTT}
+    bundle = tmp_path / "bundle"
+
+    main(["extract", URL, "-o", str(bundle), "--allow-auto-subs"], transcriber=fake_transcriber)
+
+    assert read_json(bundle / "manifest.json")["transcript_origin"] == "auto_subtitles"
+    assert read_json(bundle / "transcript.json")["segments"] == [
+        {"start": 0.0, "end": 1.99, "text": "today loops"},
+        {"start": 2.0, "end": 4.0, "text": "els print a"},
+    ]

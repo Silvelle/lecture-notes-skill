@@ -37,13 +37,15 @@ class KeyFrame:
 
 @dataclass(frozen=True)
 class KeyFrames:
-    status: Literal["extracted", "skipped", "no_video"]  # "skipped" means --no-frames
+    # "skipped": --no-frames; "no_video": audio-only Source; "video_blocked": transcript-only
+    status: Literal["extracted", "skipped", "no_video", "video_blocked"]
     min_interval: float | None
     frames: list[KeyFrame]
 
 
 SKIPPED = KeyFrames(status="skipped", min_interval=None, frames=[])
 NO_VIDEO = KeyFrames(status="no_video", min_interval=None, frames=[])
+VIDEO_BLOCKED = KeyFrames(status="video_blocked", min_interval=None, frames=[])
 
 
 def extract_key_frames(

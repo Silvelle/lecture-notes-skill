@@ -39,6 +39,11 @@ def main(
     )
     extract_cmd.add_argument("--no-frames", action="store_true", help="skip Key frames")
     extract_cmd.add_argument(
+        "--allow-auto-subs", action="store_true",
+        help="use the site's auto-generated subtitles instead of local speech recognition "
+        "(faster, but they garble code and terms)",
+    )
+    extract_cmd.add_argument(
         "--cookies-from-browser", metavar="BROWSER[:PROFILE]",
         help="use your browser's cookies for sites that block anonymous downloads; "
         "risks your account being flagged, so prefer a secondary account",
@@ -68,6 +73,7 @@ def main(
             downloader=downloader,
             cookies_from_browser=args.cookies_from_browser,
             language=args.lang,
+            allow_auto_subs=args.allow_auto_subs,
             with_key_frames=not args.no_frames,
             min_frame_interval=args.min_frame_interval,
         )

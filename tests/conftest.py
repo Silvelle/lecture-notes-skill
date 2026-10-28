@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import shutil
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -69,13 +69,24 @@ class FakeDownloader:
     )
     blocked: SourceBlocked | None = None
     video_blocked: SourceBlocked | None = None
+    human_subtitles: dict[str, list[Segment]] = field(default_factory=dict)
+    auto_subtitles: dict[str, list[Segment]] = field(default_factory=dict)
     requested: list[str] = field(default_factory=list)
+    subtitle_requests: list[tuple[str, bool]] = field(default_factory=list)
 
     def info(self, url: str) -> LectureInfo:
         self.requested.append(url)
         if self.blocked:
             raise self.blocked
-        return self.info_result
+        return replace(
+            self.info_result,
+            subtitle_languages=tuple(self.human_subtitles),
+            auto_subtitle_languages=tuple(self.auto_subtitles),
+        )
+
+    def fetch_subtitles(self, url: str, language: str, *, automatic: bool) -> list[Segment]:
+        self.subtitle_requests.append((language, automatic))
+        return (self.auto_subtitles if automatic else self.human_subtitles)[language]
 
     def download_video(self, url: str, directory: Path) -> Path:
         if self.blocked or self.video_blocked:

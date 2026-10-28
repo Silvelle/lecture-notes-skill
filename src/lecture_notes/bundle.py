@@ -24,6 +24,7 @@ def write(
     channel: str | None,
     duration: float,
     transcription: Transcription,
+    transcript_origin: str,
     language_overridden: bool,
     key_frames: KeyFrames,
 ) -> None:
@@ -39,7 +40,7 @@ def write(
             "duration": round(duration, 3),
             "language": transcription.language,
             "language_origin": "user" if language_overridden else "detected",
-            "transcript_origin": "local_speech_recognition",
+            "transcript_origin": transcript_origin,
             "model": transcription.model,
             "device": transcription.device,
             "key_frames": asdict(key_frames),
