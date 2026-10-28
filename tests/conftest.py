@@ -8,9 +8,17 @@ from typing import Any
 
 import pytest
 
+from lecture_notes import hardware
+from lecture_notes.hardware import DeviceReport, TranscriberChoice
 from lecture_notes.sources import LectureInfo, SourceBlocked
 from lecture_notes.transcriber import Segment, Transcription
 from tests.fixture_lecture import make_lecture
+
+
+@pytest.fixture(autouse=True)
+def cpu_only_machine(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests see a CPU-only machine unless they pass their own device report."""
+    monkeypatch.setattr(hardware, "probe", lambda: DeviceReport(gpus=(), cpu_count=8))
 
 
 @pytest.fixture(scope="session")
@@ -26,6 +34,12 @@ class FakeTranscriber:
     segments: list[Segment]
     detected_language: str = "en"
     calls: list[tuple[Path, str | None]] = field(default_factory=list)
+    choice: TranscriberChoice | None = None
+
+    def __call__(self, choice: TranscriberChoice) -> FakeTranscriber:
+        """Also a transcriber factory: records the model choice `extract` made."""
+        self.choice = choice
+        return self
 
     def transcribe(self, audio: Path, language: str | None) -> Transcription:
         assert audio.is_file(), "transcriber must receive an extracted audio file"
@@ -33,8 +47,8 @@ class FakeTranscriber:
         return Transcription(
             language=language or self.detected_language,
             segments=self.segments,
-            model="fake-model",
-            device="cpu",
+            model=self.choice.model if self.choice else "fake-model",
+            device=self.choice.device if self.choice else "cpu",
         )
 
 

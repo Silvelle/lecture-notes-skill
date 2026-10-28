@@ -19,7 +19,7 @@ def test_url_source_becomes_a_bundle_with_lecture_metadata(
     bundle = tmp_path / "bundle"
 
     exit_code = main(["extract", URL, "-o", str(bundle)],
-                     transcriber=fake_transcriber, downloader=fake_downloader)
+                     transcriber_factory=fake_transcriber, downloader=fake_downloader)
 
     assert exit_code == 0
     manifest = read_json(bundle / "manifest.json")
@@ -45,7 +45,7 @@ def test_start_time_and_playlist_parameters_are_dropped(
     given: str, requested: str,
 ) -> None:
     main(["extract", given, "-o", str(tmp_path / "b")],
-         transcriber=fake_transcriber, downloader=fake_downloader)
+         transcriber_factory=fake_transcriber, downloader=fake_downloader)
 
     assert fake_downloader.requested == [requested]
 
@@ -55,7 +55,7 @@ def test_a_playlist_url_is_rejected_with_a_hint(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     exit_code = main(["extract", "https://www.youtube.com/playlist?list=PL123", "-o", str(tmp_path / "b")],
-                     transcriber=fake_transcriber, downloader=fake_downloader)
+                     transcriber_factory=fake_transcriber, downloader=fake_downloader)
 
     assert exit_code == 1
     assert "playlist" in capsys.readouterr().err
@@ -69,7 +69,7 @@ def test_a_bot_block_explains_every_way_out(
     fake_downloader.blocked = SourceBlocked("Sign in to confirm you're not a bot")
 
     exit_code = main(["extract", URL, "-o", str(tmp_path / "b")],
-                     transcriber=fake_transcriber, downloader=fake_downloader)
+                     transcriber_factory=fake_transcriber, downloader=fake_downloader)
 
     err = capsys.readouterr().err
     assert exit_code == 1

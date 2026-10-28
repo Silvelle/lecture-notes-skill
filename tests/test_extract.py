@@ -17,7 +17,7 @@ def test_extract_writes_transcript_and_manifest(
 ) -> None:
     bundle = tmp_path / "bundle"
 
-    exit_code = main(["extract", str(lecture_file), "-o", str(bundle)], transcriber=fake_transcriber)
+    exit_code = main(["extract", str(lecture_file), "-o", str(bundle)], transcriber_factory=fake_transcriber)
 
     assert exit_code == 0
     assert (bundle / "manifest.json").is_file()
@@ -31,7 +31,7 @@ def test_manifest_records_source_duration_language_and_origin(
     bundle = tmp_path / "bundle"
     fake_transcriber.detected_language = "ru"
 
-    main(["extract", str(lecture_file), "-o", str(bundle)], transcriber=fake_transcriber)
+    main(["extract", str(lecture_file), "-o", str(bundle)], transcriber_factory=fake_transcriber)
 
     manifest = read_json(bundle / "manifest.json")
     assert manifest["schema_version"] == 1
@@ -41,8 +41,9 @@ def test_manifest_records_source_duration_language_and_origin(
     assert manifest["language"] == "ru"
     assert manifest["language_origin"] == "detected"
     assert manifest["transcript_origin"] == "local_speech_recognition"
-    assert manifest["model"] == "fake-model"
+    assert manifest["model"] == "small"  # chosen for the (test) CPU-only machine
     assert manifest["device"] == "cpu"
+    assert manifest["hardware_tier"] == "cpu"
     assert manifest["tool_version"] == "0.1.0"
     assert fake_transcriber.calls[0][1] is None, "no --lang means the transcriber detects"
 
@@ -53,7 +54,7 @@ def test_lang_option_overrides_detection_and_is_recorded(
     bundle = tmp_path / "bundle"
     fake_transcriber.detected_language = "en"
 
-    main(["extract", str(lecture_file), "-o", str(bundle), "--lang", "ru"], transcriber=fake_transcriber)
+    main(["extract", str(lecture_file), "-o", str(bundle), "--lang", "ru"], transcriber_factory=fake_transcriber)
 
     assert fake_transcriber.calls[0][1] == "ru"
     manifest = read_json(bundle / "manifest.json")
@@ -66,7 +67,7 @@ def test_transcript_json_keeps_segments_exactly_as_spoken(
 ) -> None:
     bundle = tmp_path / "bundle"
 
-    main(["extract", str(lecture_file), "-o", str(bundle)], transcriber=fake_transcriber)
+    main(["extract", str(lecture_file), "-o", str(bundle)], transcriber_factory=fake_transcriber)
 
     transcript = read_json(bundle / "transcript.json")
     assert transcript["language"] == "en"
@@ -91,7 +92,7 @@ def test_transcript_markdown_is_readable_paragraphs_with_timestamps(
         ]
     )
 
-    main(["extract", str(lecture_file), "-o", str(bundle)], transcriber=transcriber)
+    main(["extract", str(lecture_file), "-o", str(bundle)], transcriber_factory=transcriber)
 
     assert (bundle / "transcript.md").read_text(encoding="utf-8") == (
         "# lecture\n"
@@ -117,7 +118,7 @@ def test_missing_ffmpeg_is_a_one_line_error(
 ) -> None:
     monkeypatch.setenv("PATH", str(tmp_path / "empty"))
 
-    exit_code = main(["extract", str(lecture_file), "-o", str(tmp_path / "b")], transcriber=fake_transcriber)
+    exit_code = main(["extract", str(lecture_file), "-o", str(tmp_path / "b")], transcriber_factory=fake_transcriber)
 
     assert exit_code == 1
     assert "ffmpeg" in _one_line_error(capsys)
@@ -129,7 +130,7 @@ def test_missing_file_is_a_one_line_error(
 ) -> None:
     missing = tmp_path / "nope.mp4"
 
-    exit_code = main(["extract", str(missing), "-o", str(tmp_path / "b")], transcriber=fake_transcriber)
+    exit_code = main(["extract", str(missing), "-o", str(tmp_path / "b")], transcriber_factory=fake_transcriber)
 
     assert exit_code == 1
     err = _one_line_error(capsys)
@@ -142,7 +143,7 @@ def test_unreadable_file_is_a_one_line_error(
     junk = tmp_path / "notes.mp4"
     junk.write_text("this is not a video", encoding="utf-8")
 
-    exit_code = main(["extract", str(junk), "-o", str(tmp_path / "b")], transcriber=fake_transcriber)
+    exit_code = main(["extract", str(junk), "-o", str(tmp_path / "b")], transcriber_factory=fake_transcriber)
 
     assert exit_code == 1
     err = _one_line_error(capsys)

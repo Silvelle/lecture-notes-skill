@@ -18,10 +18,10 @@ AUTO = [Segment(start=0.0, end=2.0, text="today loops els print a")]
 
 
 def extract(tmp_path: Path, downloader: FakeDownloader, *args: str,
-            transcriber: FakeTranscriber | None = None) -> tuple[int, Path]:
+            transcriber_factory: FakeTranscriber | None = None) -> tuple[int, Path]:
     bundle = tmp_path / "bundle"
     code = main(["extract", URL, "-o", str(bundle), *args],
-                transcriber=transcriber, downloader=downloader)
+                transcriber_factory=transcriber_factory, downloader=downloader)
     return code, bundle
 
 
@@ -31,7 +31,7 @@ def test_human_subtitles_win_and_whisper_is_skipped(
     fake_downloader.human_subtitles = {"en": HUMAN}
     fake_downloader.auto_subtitles = {"en": AUTO}
 
-    code, bundle = extract(tmp_path, fake_downloader, transcriber=fake_transcriber)
+    code, bundle = extract(tmp_path, fake_downloader, transcriber_factory=fake_transcriber)
 
     manifest = read_json(bundle / "manifest.json")
     assert code == 0
@@ -47,7 +47,7 @@ def test_human_subtitles_match_a_regional_variant_of_the_language(
 ) -> None:
     fake_downloader.human_subtitles = {"de": HUMAN, "en-US": HUMAN}
 
-    extract(tmp_path, fake_downloader, transcriber=fake_transcriber)
+    extract(tmp_path, fake_downloader, transcriber_factory=fake_transcriber)
 
     assert fake_downloader.subtitle_requests == [("en-US", False)]
 
@@ -57,7 +57,7 @@ def test_only_auto_subtitles_and_a_transcriber_means_whisper(
 ) -> None:
     fake_downloader.auto_subtitles = {"en": AUTO}
 
-    code, bundle = extract(tmp_path, fake_downloader, transcriber=fake_transcriber)
+    code, bundle = extract(tmp_path, fake_downloader, transcriber_factory=fake_transcriber)
 
     assert code == 0
     assert read_json(bundle / "manifest.json")["transcript_origin"] == "local_speech_recognition"
@@ -70,7 +70,7 @@ def test_allow_auto_subs_uses_them_and_marks_them(
 ) -> None:
     fake_downloader.auto_subtitles = {"en-orig": AUTO, "fr": AUTO}
 
-    code, bundle = extract(tmp_path, fake_downloader, "--allow-auto-subs", transcriber=fake_transcriber)
+    code, bundle = extract(tmp_path, fake_downloader, "--allow-auto-subs", transcriber_factory=fake_transcriber)
 
     manifest = read_json(bundle / "manifest.json")
     assert code == 0
@@ -98,7 +98,7 @@ def test_blocked_video_with_subtitles_gives_a_transcript_only_bundle(
     fake_downloader.video_blocked = SourceBlocked("Sign in to confirm you're not a bot")
     fake_downloader.auto_subtitles = {"en": AUTO}
 
-    code, bundle = extract(tmp_path, fake_downloader, transcriber=fake_transcriber)
+    code, bundle = extract(tmp_path, fake_downloader, transcriber_factory=fake_transcriber)
 
     manifest = read_json(bundle / "manifest.json")
     assert code == 0
@@ -114,7 +114,7 @@ def test_blocked_video_without_subtitles_is_the_blocked_error(
 ) -> None:
     fake_downloader.video_blocked = SourceBlocked("Sign in to confirm you're not a bot")
 
-    code, _ = extract(tmp_path, fake_downloader, transcriber=fake_transcriber)
+    code, _ = extract(tmp_path, fake_downloader, transcriber_factory=fake_transcriber)
 
     assert code == 1
     assert "Ways out" in capsys.readouterr().err

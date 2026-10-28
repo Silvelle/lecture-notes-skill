@@ -19,7 +19,7 @@ def test_one_key_frame_per_slide_timed_within_the_slide(
 ) -> None:
     bundle = tmp_path / "bundle"
 
-    main(["extract", str(lecture_file), "-o", str(bundle)], transcriber=fake_transcriber)
+    main(["extract", str(lecture_file), "-o", str(bundle)], transcriber_factory=fake_transcriber)
 
     key_frames = read_json(bundle / "manifest.json")["key_frames"]
     assert key_frames["status"] == "extracted"
@@ -38,7 +38,7 @@ def test_a_slide_shown_again_is_not_a_new_key_frame(
     lecture = make_lecture(tmp_path / "fixture", slides=[first, second, first], speech=False)
     bundle = tmp_path / "bundle"
 
-    main(["extract", str(lecture), "-o", str(bundle)], transcriber=fake_transcriber)
+    main(["extract", str(lecture), "-o", str(bundle)], transcriber_factory=fake_transcriber)
 
     frames = read_json(bundle / "manifest.json")["key_frames"]["frames"]
     assert [int(f["time"] // SLIDE_SECONDS) for f in frames] == [0, 1]
@@ -56,7 +56,7 @@ def test_min_frame_interval_adds_frames_on_a_long_static_slide(
     bundle = tmp_path / "bundle"
 
     main(["extract", str(lecture), "-o", str(bundle), "--min-frame-interval", "3"],
-         transcriber=fake_transcriber)
+         transcriber_factory=fake_transcriber)
 
     key_frames = read_json(bundle / "manifest.json")["key_frames"]
     assert key_frames["min_interval"] == 3.0
@@ -69,7 +69,7 @@ def test_no_frames_option_skips_key_frames_and_the_manifest_says_so(
 ) -> None:
     bundle = tmp_path / "bundle"
 
-    main(["extract", str(lecture_file), "-o", str(bundle), "--no-frames"], transcriber=fake_transcriber)
+    main(["extract", str(lecture_file), "-o", str(bundle), "--no-frames"], transcriber_factory=fake_transcriber)
 
     assert read_json(bundle / "manifest.json")["key_frames"] == {
         "status": "skipped", "min_interval": None, "frames": [],
@@ -89,7 +89,7 @@ def test_audio_only_source_gets_a_bundle_without_key_frames(
     )
     bundle = tmp_path / "bundle"
 
-    assert main(["extract", str(audio), "-o", str(bundle)], transcriber=fake_transcriber) == 0
+    assert main(["extract", str(audio), "-o", str(bundle)], transcriber_factory=fake_transcriber) == 0
 
     assert read_json(bundle / "manifest.json")["key_frames"] == {
         "status": "no_video", "min_interval": None, "frames": [],
@@ -106,7 +106,7 @@ def test_a_slide_dropped_for_sharing_a_second_is_kept_when_it_returns(
     )
     bundle = tmp_path / "bundle"
 
-    main(["extract", str(lecture), "-o", str(bundle)], transcriber=fake_transcriber)
+    main(["extract", str(lecture), "-o", str(bundle)], transcriber_factory=fake_transcriber)
 
     frames = read_json(bundle / "manifest.json")["key_frames"]["frames"]
     assert [int(f["time"]) for f in frames] == [0, 1, 3]
@@ -117,7 +117,7 @@ def test_min_frame_interval_must_be_positive(
 ) -> None:
     with pytest.raises(SystemExit) as exit_info:
         main(["extract", str(lecture_file), "-o", str(tmp_path / "b"), "--min-frame-interval", "0"],
-             transcriber=fake_transcriber)
+             transcriber_factory=fake_transcriber)
     assert exit_info.value.code == 2
 
 
@@ -126,9 +126,9 @@ def test_re_extracting_leaves_no_stale_key_frames(
 ) -> None:
     bundle = tmp_path / "bundle"
     main(["extract", str(lecture_file), "-o", str(bundle), "--min-frame-interval", "1"],
-         transcriber=fake_transcriber)
+         transcriber_factory=fake_transcriber)
 
-    main(["extract", str(lecture_file), "-o", str(bundle)], transcriber=fake_transcriber)
+    main(["extract", str(lecture_file), "-o", str(bundle)], transcriber_factory=fake_transcriber)
 
     listed = {Path(f["file"]).name for f in read_json(bundle / "manifest.json")["key_frames"]["frames"]}
     assert {p.name for p in (bundle / "frames").iterdir()} == listed

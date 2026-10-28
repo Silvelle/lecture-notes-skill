@@ -25,6 +25,8 @@ def write(
     duration: float,
     transcription: Transcription,
     transcript_origin: str,
+    hardware_tier: str | None,
+    compute_type: str | None,
     language_overridden: bool,
     key_frames: KeyFrames,
 ) -> None:
@@ -43,6 +45,8 @@ def write(
             "transcript_origin": transcript_origin,
             "model": transcription.model,
             "device": transcription.device,
+            "compute_type": compute_type,
+            "hardware_tier": hardware_tier,
             "key_frames": asdict(key_frames),
             "files": {"transcript_json": "transcript.json", "transcript_markdown": "transcript.md"},
         },

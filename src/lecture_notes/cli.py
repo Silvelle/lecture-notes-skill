@@ -10,18 +10,19 @@ from pathlib import Path
 
 from lecture_notes import doctor
 from lecture_notes.errors import LectureNotesError
-from lecture_notes.extract import extract
+from lecture_notes.extract import TranscriberFactory, extract
 from lecture_notes.frames import DEFAULT_MIN_INTERVAL
 from lecture_notes.sources import Downloader
-from lecture_notes.transcriber import Transcriber
+from lecture_notes.hardware import DeviceReport
 from lecture_notes.verify import verify
 
 
 def main(
     argv: list[str] | None = None,
     *,
-    transcriber: Transcriber | None = None,
+    transcriber_factory: TranscriberFactory | None = None,
     downloader: Downloader | None = None,
+    hardware: DeviceReport | None = None,
 ) -> int:
     parser = argparse.ArgumentParser(prog="lecture-notes")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -38,6 +39,11 @@ def main(
         help=f"take a Key frame at least this often (default: {DEFAULT_MIN_INTERVAL:g})",
     )
     extract_cmd.add_argument("--no-frames", action="store_true", help="skip Key frames")
+    extract_cmd.add_argument("--model", help="speech model, e.g. small, medium, large-v3 "
+                             "(default: chosen for this machine, see `doctor`)")
+    extract_cmd.add_argument("--device", choices=["cpu", "cuda"], help="where to run it")
+    extract_cmd.add_argument("--yes", action="store_true",
+                             help="don't ask before a long transcription on CPU")
     extract_cmd.add_argument(
         "--allow-auto-subs", action="store_true",
         help="use the site's auto-generated subtitles instead of local speech recognition "
@@ -60,7 +66,7 @@ def main(
 
     args = parser.parse_args(argv)
     if args.command == "doctor":
-        lines, ready = doctor.report()
+        lines, ready = doctor.report(hardware)
         print("\n".join(lines))
         return 0 if ready else 1
     if args.command == "verify":
@@ -69,8 +75,12 @@ def main(
         bundle = extract(
             args.source,
             args.output,
-            transcriber=transcriber,
+            transcriber_factory=transcriber_factory,
             downloader=downloader,
+            hardware_report=hardware,
+            model=args.model,
+            device=args.device,
+            assume_yes=args.yes,
             cookies_from_browser=args.cookies_from_browser,
             language=args.lang,
             allow_auto_subs=args.allow_auto_subs,

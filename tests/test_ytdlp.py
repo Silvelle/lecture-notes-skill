@@ -105,7 +105,7 @@ def test_url_is_downloaded_through_ytdlp_into_a_bundle(
 ) -> None:
     bundle = tmp_path / "bundle"
 
-    assert main(["extract", URL, "-o", str(bundle)], transcriber=fake_transcriber) == 0
+    assert main(["extract", URL, "-o", str(bundle)], transcriber_factory=fake_transcriber) == 0
 
     manifest = read_json(bundle / "manifest.json")
     assert manifest["source"] == {"kind": "url", "url": URL}
@@ -118,7 +118,7 @@ def test_url_is_downloaded_through_ytdlp_into_a_bundle(
 def test_browser_cookies_are_never_read_without_the_flag(
     tmp_path: Path, fake_transcriber: FakeTranscriber, stub_ytdlp: type[StubYoutubeDL]
 ) -> None:
-    main(["extract", URL, "-o", str(tmp_path / "b")], transcriber=fake_transcriber)
+    main(["extract", URL, "-o", str(tmp_path / "b")], transcriber_factory=fake_transcriber)
 
     assert stub_ytdlp.instances
     assert all("cookiesfrombrowser" not in params for params in stub_ytdlp.instances)
@@ -129,7 +129,7 @@ def test_browser_cookies_are_used_when_asked(
     tmp_path: Path, fake_transcriber: FakeTranscriber, stub_ytdlp: type[StubYoutubeDL]
 ) -> None:
     main(["extract", URL, "-o", str(tmp_path / "b"), "--cookies-from-browser", "firefox:work"],
-         transcriber=fake_transcriber)
+         transcriber_factory=fake_transcriber)
 
     assert all(p["cookiesfrombrowser"] == ("firefox", "work", None, None)
                for p in stub_ytdlp.instances)
@@ -141,7 +141,7 @@ def test_ytdlp_bot_check_becomes_the_blocked_message(
 ) -> None:
     stub_ytdlp.error = "Sign in to confirm you're not a bot. Use --cookies-from-browser"
 
-    exit_code = main(["extract", URL, "-o", str(tmp_path / "b")], transcriber=fake_transcriber)
+    exit_code = main(["extract", URL, "-o", str(tmp_path / "b")], transcriber_factory=fake_transcriber)
 
     err = capsys.readouterr().err
     assert exit_code == 1
@@ -154,7 +154,7 @@ def test_other_ytdlp_errors_are_one_line(
 ) -> None:
     stub_ytdlp.error = "Video unavailable"
 
-    exit_code = main(["extract", URL, "-o", str(tmp_path / "b")], transcriber=fake_transcriber)
+    exit_code = main(["extract", URL, "-o", str(tmp_path / "b")], transcriber_factory=fake_transcriber)
 
     err = capsys.readouterr().err
     assert exit_code == 1
@@ -172,7 +172,7 @@ def test_human_subtitles_are_parsed_from_vtt(
     stub_ytdlp.vtt = {"https://subs/ru": HUMAN_VTT}
     bundle = tmp_path / "bundle"
 
-    assert main(["extract", URL, "-o", str(bundle)], transcriber=fake_transcriber) == 0
+    assert main(["extract", URL, "-o", str(bundle)], transcriber_factory=fake_transcriber) == 0
 
     assert read_json(bundle / "manifest.json")["transcript_origin"] == "human_subtitles"
     assert read_json(bundle / "transcript.json")["segments"] == [
@@ -188,7 +188,7 @@ def test_auto_subtitles_lose_youtubes_repeated_lines_and_word_timings(
     stub_ytdlp.vtt = {"https://auto/ru": AUTO_VTT}
     bundle = tmp_path / "bundle"
 
-    main(["extract", URL, "-o", str(bundle), "--allow-auto-subs"], transcriber=fake_transcriber)
+    main(["extract", URL, "-o", str(bundle), "--allow-auto-subs"], transcriber_factory=fake_transcriber)
 
     assert read_json(bundle / "manifest.json")["transcript_origin"] == "auto_subtitles"
     assert read_json(bundle / "transcript.json")["segments"] == [

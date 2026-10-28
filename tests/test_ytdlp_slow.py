@@ -19,7 +19,7 @@ def test_real_youtube_video_becomes_a_bundle(
 ) -> None:
     bundle = tmp_path / "bundle"
 
-    exit_code = main(["extract", ME_AT_THE_ZOO, "-o", str(bundle)], transcriber=fake_transcriber)
+    exit_code = main(["extract", ME_AT_THE_ZOO, "-o", str(bundle)], transcriber_factory=fake_transcriber)
 
     if exit_code != 0 and "blocked by the site" in capsys.readouterr().err:
         pytest.skip("YouTube blocked this machine (bot check); nothing else to test here")
