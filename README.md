@@ -20,11 +20,13 @@ lecture-notes extract lecture.mp4 -o lecture-bundle
 
 This writes a **Lecture bundle**:
 
-- `manifest.json`: Source, duration, language, Transcript origin, model, device, tool version
+- `manifest.json`: Source, duration, language, Transcript origin, model, device, tool version, and the Key frame list
 - `transcript.json`: timestamped segments (`start`, `end`, `text`) in the spoken language
 - `transcript.md`: the Transcript as readable paragraphs with timestamps
+- `frames/frame_<seconds>.jpg`: Key frames wherever the shown content changes (near-duplicates removed), plus at least one every 30 s
 
 The language is detected automatically; pass `--lang ru` (or any code) to override it.
+`--min-frame-interval SECONDS` changes the 30 s minimum; `--no-frames` skips Key frames.
 
 ## Develop
 

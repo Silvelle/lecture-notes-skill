@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from lecture_notes import __version__
+from lecture_notes.frames import KeyFrames
 from lecture_notes.transcriber import Segment, Transcription
 
 SCHEMA_VERSION = 1
@@ -22,6 +23,7 @@ def write(
     duration: float,
     transcription: Transcription,
     language_overridden: bool,
+    key_frames: KeyFrames,
 ) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     _write_json(
@@ -37,6 +39,7 @@ def write(
             "transcript_origin": "local_speech_recognition",
             "model": transcription.model,
             "device": transcription.device,
+            "key_frames": asdict(key_frames),
             "files": {"transcript_json": "transcript.json", "transcript_markdown": "transcript.md"},
         },
     )

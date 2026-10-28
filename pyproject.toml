@@ -9,7 +9,7 @@ description = "Turn video lectures into faithful, timestamped Lecture bundles fo
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
-dependencies = []
+dependencies = ["pillow>=10", "imagehash>=4.3"]
 
 [project.optional-dependencies]
 whisper = ["faster-whisper>=1.1", "numpy"]
@@ -30,5 +30,5 @@ strict = true
 files = ["src", "tests"]
 
 [[tool.mypy.overrides]]
-module = ["faster_whisper.*", "ctranslate2.*", "numpy.*"]
+module = ["faster_whisper.*", "ctranslate2.*", "numpy.*", "imagehash.*"]
 ignore_missing_imports = true
