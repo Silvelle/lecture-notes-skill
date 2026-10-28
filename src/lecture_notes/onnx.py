@@ -21,9 +21,11 @@ class OnnxAsrTranscriber:
                      if choice.device == "cuda" else ["CPUExecutionProvider"])
         self._choice = choice
         # GigaAM takes ~25 s at a time; voice activity detection cuts the Lecture into
-        # speech segments, which also gives each one its timestamps.
+        # speech segments, which also gives each one its timestamps. A low threshold and
+        # some padding: dropping speech is worse than keeping a little noise.
         self._model = onnx_asr.load_model(choice.model, providers=providers).with_vad(
-            onnx_asr.load_vad("silero", providers=providers)
+            onnx_asr.load_vad("silero", providers=providers),
+            threshold=0.3, neg_threshold=0.15, speech_pad_ms=200,
         )
 
     def transcribe(self, audio: Path, language: str | None) -> Transcription:
