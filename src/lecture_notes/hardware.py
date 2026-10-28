@@ -12,8 +12,15 @@ from pathlib import Path
 # Confirm before CPU transcription expected to run longer than this.
 CONFIRM_ABOVE_SECONDS = 10 * 60
 
-# Rough processing time per second of audio, from faster-whisper's published benchmarks.
+FASTER_WHISPER = "faster-whisper"
+ONNX_ASR = "onnx-asr"
+GIGAAM = "gigaam-v3-e2e-rnnt"  # GigaAM v3 with punctuation, Russian only
+_BACKEND_MODULES = {FASTER_WHISPER: "faster_whisper", ONNX_ASR: "onnx_asr"}
+
+# Rough processing time per second of audio, from the backends' published benchmarks.
 _SPEED = {
+    ("cuda", GIGAAM): 0.02,
+    ("cpu", GIGAAM): 0.1,
     ("cuda", "large-v3"): 0.08,
     ("cuda", "large-v3-turbo"): 0.04,
     ("cuda", "medium"): 0.05,
@@ -40,6 +47,7 @@ class Gpu:
 class DeviceReport:
     gpus: tuple[Gpu, ...]
     cpu_count: int
+    backends: frozenset[str] = frozenset({FASTER_WHISPER})  # installed speech backends
 
 
 @dataclass(frozen=True)
@@ -49,22 +57,28 @@ class TranscriberChoice:
     device: str
     compute_type: str
     cpu_threads: int
+    backend: str = FASTER_WHISPER
 
     def describe(self) -> str:
         threads = f", {self.cpu_threads} threads" if self.device == "cpu" else ""
-        return f"{self.model} on {self.device} ({self.compute_type}){threads}"
+        via = f" via {self.backend}" if self.backend != FASTER_WHISPER else ""
+        return f"{self.model} on {self.device} ({self.compute_type}){threads}{via}"
 
     def estimate_seconds(self, audio_seconds: float) -> float:
         return audio_seconds * _SPEED.get((self.device, self.model), 1.0)
 
 
 def probe() -> DeviceReport:
-    """CUDA devices via ctranslate2 (if installed), VRAM via nvidia-ml-py (if installed)."""
+    """CUDA devices via ctranslate2 (if installed), VRAM via nvidia-ml-py (if installed),
+    and which speech backends are installed."""
     cpu_count = os.cpu_count() or 2
+    backends = frozenset(
+        name for name, module in _BACKEND_MODULES.items() if _installed(module)
+    )
     try:
         import ctranslate2
     except ImportError:
-        return DeviceReport(gpus=(), cpu_count=cpu_count)
+        return DeviceReport(gpus=(), cpu_count=cpu_count, backends=backends)
     gpus = []
     libraries = _cuda_libraries_loadable()
     for index in range(ctranslate2.get_cuda_device_count()):
@@ -72,12 +86,20 @@ def probe() -> DeviceReport:
         name, capability, free = _nvml(index)
         gpus.append(Gpu(name=name, compute_capability=capability, free_vram_mb=free,
                         compute_types=types, cuda_libraries=libraries))
-    return DeviceReport(gpus=tuple(gpus), cpu_count=cpu_count)
+    return DeviceReport(gpus=tuple(gpus), cpu_count=cpu_count, backends=backends)
 
 
-def choose(report: DeviceReport, *, model: str | None = None,
-           device: str | None = None) -> TranscriberChoice:
-    """The model for this machine; `model`/`device` override the automatic choice."""
+def _installed(module: str) -> bool:
+    try:
+        return importlib.util.find_spec(module) is not None
+    except (ImportError, ValueError):  # ValueError: module set to None in sys.modules
+        return False
+
+
+def choose(report: DeviceReport, *, model: str | None = None, device: str | None = None,
+           backend: str | None = None, language: str | None = None) -> TranscriberChoice:
+    """The model for this machine and Lecture language; the keyword options override
+    the automatic choice. Russian goes to GigaAM when onnx-asr is installed."""
     # Leave half the cores (at most 8 used) so the machine stays usable.
     threads = max(1, min(8, report.cpu_count // 2))
     cpu = TranscriberChoice(tier="cpu", model="small", device="cpu", compute_type="int8",
@@ -90,6 +112,10 @@ def choose(report: DeviceReport, *, model: str | None = None,
                                    compute_type="float16", cpu_threads=threads)
     else:
         choice = _gpu_choice(gpu, threads)
+    if backend is None:
+        backend = ONNX_ASR if language == "ru" and ONNX_ASR in report.backends else FASTER_WHISPER
+    if backend == ONNX_ASR:
+        choice = replace(choice, backend=ONNX_ASR, model=GIGAAM, compute_type="float32")
     if model:
         choice = replace(choice, model=model)
     return choice

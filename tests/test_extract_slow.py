@@ -25,7 +25,7 @@ def test_faster_whisper_transcribes_the_fixture_with_timestamps(tmp_path: Path) 
     manifest = read_json(bundle / "manifest.json")
     segments = read_json(bundle / "transcript.json")["segments"]
     assert manifest["transcript_origin"] == "local_speech_recognition"
-    assert manifest["model"].startswith("faster-whisper/")
+    assert manifest["backend"] == "faster-whisper"
     assert segments, "expected speech to be recognised"
     assert all(s["text"].strip() for s in segments)
     for s in segments:

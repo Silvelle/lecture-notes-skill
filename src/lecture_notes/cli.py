@@ -42,6 +42,10 @@ def main(
     extract_cmd.add_argument("--model", help="speech model, e.g. small, medium, large-v3 "
                              "(default: chosen for this machine, see `doctor`)")
     extract_cmd.add_argument("--device", choices=["cpu", "cuda"], help="where to run it")
+    extract_cmd.add_argument(
+        "--backend", choices=["faster-whisper", "onnx-asr"],
+        help="speech recognition backend (default: onnx-asr/GigaAM for Russian when installed)",
+    )
     extract_cmd.add_argument("--yes", action="store_true",
                              help="don't ask before a long transcription on CPU")
     extract_cmd.add_argument(
@@ -80,6 +84,7 @@ def main(
             hardware_report=hardware,
             model=args.model,
             device=args.device,
+            backend=args.backend,
             assume_yes=args.yes,
             cookies_from_browser=args.cookies_from_browser,
             language=args.lang,

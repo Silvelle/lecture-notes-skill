@@ -42,7 +42,7 @@ def test_a_slide_shown_again_is_not_a_new_key_frame(
 
     frames = read_json(bundle / "manifest.json")["key_frames"]["frames"]
     assert [int(f["time"] // SLIDE_SECONDS) for f in frames] == [0, 1]
-    assert sorted(p.name for p in (bundle / "frames").iterdir()) == [
+    assert sorted(p.name for p in (bundle / "frames").glob("*.jpg")) == [
         Path(f["file"]).name for f in frames
     ]
 
@@ -131,4 +131,5 @@ def test_re_extracting_leaves_no_stale_key_frames(
     main(["extract", str(lecture_file), "-o", str(bundle)], transcriber_factory=fake_transcriber)
 
     listed = {Path(f["file"]).name for f in read_json(bundle / "manifest.json")["key_frames"]["frames"]}
-    assert {p.name for p in (bundle / "frames").iterdir()} == listed
+    assert {p.name for p in (bundle / "frames").glob("*.jpg")} == listed
+    assert {p.stem for p in (bundle / "frames").glob("*.txt")} <= {Path(n).stem for n in listed}

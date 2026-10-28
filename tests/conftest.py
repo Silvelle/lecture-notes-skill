@@ -17,8 +17,15 @@ from tests.fixture_lecture import make_lecture
 
 @pytest.fixture(autouse=True)
 def cpu_only_machine(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Tests see a CPU-only machine unless they pass their own device report."""
-    monkeypatch.setattr(hardware, "probe", lambda: DeviceReport(gpus=(), cpu_count=8))
+    """Tests see a CPU-only machine with at most faster-whisper installed (as the real
+    probe finds it), unless they pass their own device report."""
+
+    def probe() -> DeviceReport:
+        whisper = hardware._installed("faster_whisper")
+        return DeviceReport(gpus=(), cpu_count=8,
+                            backends=frozenset({hardware.FASTER_WHISPER} if whisper else set()))
+
+    monkeypatch.setattr(hardware, "probe", probe)
 
 
 @pytest.fixture(scope="session")

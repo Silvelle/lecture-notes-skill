@@ -29,6 +29,9 @@ def report(device_report: DeviceReport | None = None) -> tuple[list[str], bool]:
     lines.append(_line("faster-whisper", _module_status(
         "faster_whisper", "speech recognition; pip install 'lecture-notes[whisper]'"
     )))
+    lines.append(_line("onnx-asr", _module_status(
+        "onnx_asr", "GigaAM for Russian Lectures; pip install 'lecture-notes[ru]'"
+    )))
     lines.append(_line("tesseract", _tesseract_status()))
     return lines, ffmpeg_ok
 
