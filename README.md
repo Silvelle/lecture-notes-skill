@@ -117,7 +117,9 @@ Source ──extract──▶ Lecture bundle ──agent──▶ Lecture note �
 3. The agent writes one note in [this format](skills/lecture-notes/note-format.md). Key frames go to `attachments/<lecture>/` in your vault.
 4. `verify` checks every Citation. The agent fixes and re-runs until it passes.
 
-The package itself never calls an LLM ([ADR-0001](docs/adr/0001-no-llm-calls-in-package.md)). Without an agent you still get the full transcript and the frames.
+The package itself never calls an LLM ([ADR-0001](docs/adr/0001-no-llm-calls-in-package.md)).
+
+**No agent? You still get the whole Lecture.** `transcript.md` is the full text on one page. Each slide image sits where it appeared. With the `ocr` extra, the slide's text is under the image.
 
 ## The CLI
 

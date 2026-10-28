@@ -51,6 +51,27 @@ def test_key_frames_get_ocr_text_with_transcript_language_plus_english(
         assert text_file.read_text(encoding="utf-8").strip() == 'print("recognised")'
 
 
+def test_ocr_text_appears_under_its_frame_in_the_transcript(
+    lecture_file: Path, tmp_path: Path, fake_transcriber: FakeTranscriber,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    install_fake_tesseract(tmp_path, monkeypatch, "eng osd")
+    bundle = tmp_path / "bundle"
+
+    main(["extract", str(lecture_file), "-o", str(bundle)], transcriber_factory=fake_transcriber)
+
+    transcript = (bundle / "transcript.md").read_text(encoding="utf-8")
+    assert (
+        "![00:02](frames/frame_000002.jpg)\n"
+        "\n"
+        "```text\n"
+        'print("recognised")\n'
+        "```\n"
+        "\n"
+        "**[00:02]**"
+    ) in transcript
+
+
 def test_a_missing_language_pack_falls_back_to_english_with_a_warning(
     lecture_file: Path, tmp_path: Path, fake_transcriber: FakeTranscriber,
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],

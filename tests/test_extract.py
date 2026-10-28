@@ -92,7 +92,8 @@ def test_transcript_markdown_is_readable_paragraphs_with_timestamps(
         ]
     )
 
-    main(["extract", str(lecture_file), "-o", str(bundle)], transcriber_factory=transcriber)
+    main(["extract", str(lecture_file), "-o", str(bundle), "--no-frames"],
+         transcriber_factory=transcriber)
 
     assert (bundle / "transcript.md").read_text(encoding="utf-8") == (
         "# lecture\n"
@@ -161,3 +162,29 @@ def test_missing_whisper_extra_is_a_one_line_error(
 
     assert exit_code == 1
     assert "lecture-notes[whisper]" in _one_line_error(capsys)
+
+
+def test_transcript_markdown_shows_each_key_frame_where_it_appears(
+    lecture_file: Path, tmp_path: Path, fake_transcriber: FakeTranscriber
+) -> None:
+    bundle = tmp_path / "bundle"
+
+    main(["extract", str(lecture_file), "-o", str(bundle)], transcriber_factory=fake_transcriber)
+
+    # The fixture's slides change at 0, 2 and 4 s; each slide change starts a paragraph,
+    # even though the speech has no pause there.
+    assert (bundle / "transcript.md").read_text(encoding="utf-8") == (
+        "# lecture\n"
+        "\n"
+        "![00:00](frames/frame_000000.jpg)\n"
+        "\n"
+        "**[00:00]** First we assign one to a and print it.\n"
+        "\n"
+        "![00:02](frames/frame_000002.jpg)\n"
+        "\n"
+        "**[00:02]** Then we check whether a equals one.\n"
+        "\n"
+        "![00:04](frames/frame_000004.jpg)\n"
+        "\n"
+        '**[00:04]** els Принт А из нот единица print("a is not 1")\n'
+    )

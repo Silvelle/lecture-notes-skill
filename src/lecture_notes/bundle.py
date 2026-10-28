@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
 from lecture_notes import __version__
-from lecture_notes.frames import KeyFrames
+from lecture_notes.frames import KeyFrame, KeyFrames
 from lecture_notes.transcriber import Segment, Transcription
 
 SCHEMA_VERSION = 1
@@ -58,28 +59,52 @@ def write(
         {"language": transcription.language, "segments": [asdict(s) for s in transcription.segments]},
     )
     (out_dir / TRANSCRIPT_MARKDOWN).write_text(
-        transcript_markdown(title, transcription.segments), encoding="utf-8"
+        transcript_markdown(title, transcription.segments, key_frames.frames, out_dir),
+        encoding="utf-8",
     )
 
 
-def transcript_markdown(title: str, segments: list[Segment]) -> str:
-    """Readable Transcript: paragraphs split at pauses or every minute, each with its start time."""
-    paragraphs: list[list[Segment]] = []
+def transcript_markdown(title: str, segments: list[Segment], frames: Sequence[KeyFrame] = (),
+                        bundle_dir: Path | None = None) -> str:
+    """The whole Lecture as one readable page: paragraphs with their start time, split at
+    pauses, every minute and at each slide change, with each Key frame (and its OCR
+    text, if any) shown before the speech that runs while it is on screen."""
+    pending = sorted(frames, key=lambda f: f.time)
+    blocks = [f"# {title}"]
+    paragraph: list[Segment] = []
+
+    def flush() -> None:
+        if paragraph:
+            text = " ".join(s.text.strip() for s in paragraph)
+            blocks.append(f"**[{format_timestamp(paragraph[0].start)}]** {text}")
+            paragraph.clear()
+
     for segment in segments:
-        current = paragraphs[-1] if paragraphs else None
-        if (
-            current is None
-            or segment.start - current[-1].end > PARAGRAPH_PAUSE
-            or segment.start - current[0].start > PARAGRAPH_SPAN
-        ):
-            paragraphs.append([segment])
-        else:
-            current.append(segment)
-    blocks = [f"# {title}"] + [
-        f"**[{format_timestamp(p[0].start)}]** " + " ".join(s.text.strip() for s in p)
-        for p in paragraphs
-    ]
+        shown = []
+        while pending and pending[0].time < segment.end:
+            shown.append(pending.pop(0))
+        if shown or (paragraph and (
+            segment.start - paragraph[-1].end > PARAGRAPH_PAUSE
+            or segment.start - paragraph[0].start > PARAGRAPH_SPAN
+        )):
+            flush()
+        blocks.extend(_frame_block(frame, bundle_dir) for frame in shown)
+        paragraph.append(segment)
+    flush()
+    blocks.extend(_frame_block(frame, bundle_dir) for frame in pending)
     return "\n\n".join(blocks) + "\n"
+
+
+def _frame_block(frame: KeyFrame, bundle_dir: Path | None) -> str:
+    block = f"![{format_timestamp(frame.time)}]({frame.file})"
+    if frame.ocr_text and bundle_dir is not None:
+        text = (bundle_dir / frame.ocr_text).read_text(encoding="utf-8").strip()
+        if text:
+            fence = "```"
+            while fence in text:
+                fence += "`"
+            block += f"\n\n{fence}text\n{text}\n{fence}"
+    return block
 
 
 def format_timestamp(seconds: float) -> str:
