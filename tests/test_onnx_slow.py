@@ -36,4 +36,4 @@ def test_gigaam_transcribes_russian_speech(tmp_path: Path) -> None:
     assert (manifest["backend"], manifest["model"]) == ("onnx-asr", "gigaam-v3-e2e-rnnt")
     assert segments and all(0 <= s["start"] < s["end"] <= manifest["duration"] + 0.5 for s in segments)
     text = " ".join(s["text"] for s in segments).lower()
-    assert "сегодня" in text and "цикл" in text and "блок" in text, segments
+    assert "сегодня" in text and "цикл" in text and "блок" in text, (manifest["duration"], segments)
