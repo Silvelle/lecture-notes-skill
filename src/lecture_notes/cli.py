@@ -8,9 +8,9 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
-from lecture_notes import doctor, errors
+from lecture_notes import config, doctor, errors
 from lecture_notes.errors import LectureNotesError
-from lecture_notes.extract import TranscriberFactory, extract
+from lecture_notes.extract import TranscriberFactory, extract, plan
 from lecture_notes.frames import DEFAULT_MIN_INTERVAL
 from lecture_notes.sources import Downloader
 from lecture_notes import hardware as hardware_module
@@ -69,15 +69,38 @@ def main(
     verify_cmd.add_argument("--full", action="store_true",
                             help="the note is the full text: also flag speech it leaves out")
 
+    extract_cmd.add_argument("--plan", action="store_true",
+                             help="print what extract would do as JSON; download nothing")
+
     commands.add_parser("doctor", help="show what this machine can do")
+
+    config_cmd = commands.add_parser("config", help="show or set remembered settings")
+    config_cmd.add_argument("setting", choices=["vault"], help="vault: where notes go")
+    config_cmd.add_argument("value", nargs="?", type=Path, help="new value; omit to show it")
 
     args = parser.parse_args(argv)
     if args.command == "doctor":
         lines, ready = doctor.report(hardware)
         print("\n".join(lines))
         return 0 if ready else 1
+    if args.command == "config":
+        return _config(args.value)
     if args.command == "verify":
         return _verify(args.note, args.bundle, as_json=args.json, full=args.full)
+    if args.plan:
+        try:
+            result = plan(
+                args.source, args.output, transcriber_factory=transcriber_factory,
+                downloader=downloader, hardware_report=hardware, model=args.model,
+                device=args.device, backend=args.backend, assume_yes=args.yes,
+                cookies_from_browser=args.cookies_from_browser, language=args.lang,
+                allow_auto_subs=args.allow_auto_subs, with_key_frames=not args.no_frames,
+            )
+        except LectureNotesError as error:
+            errors.report(str(error))
+            return 1
+        print(json.dumps(asdict(result), ensure_ascii=False, indent=2))
+        return 0
     try:
         bundle = extract(
             args.source,
@@ -99,6 +122,18 @@ def main(
         errors.report(str(error))
         return 1
     print(bundle)
+    return 0
+
+
+def _config(value: Path | None) -> int:
+    if value is not None:
+        print(config.set_vault(value))
+        return 0
+    vault = config.get_vault()
+    if vault is None:
+        errors.report("no vault set; set one with: lecture-notes config vault <folder>")
+        return 1
+    print(vault)
     return 0
 
 

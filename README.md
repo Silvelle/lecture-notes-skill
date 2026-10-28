@@ -128,6 +128,8 @@ lecture-notes extract "https://www.youtube.com/watch?v=…" -o bundle
 lecture-notes extract lecture.mp4 -o bundle
 lecture-notes verify note.md bundle --json
 lecture-notes verify full-text.md bundle --full
+lecture-notes extract lecture.mp4 --plan     # what it would do; downloads nothing
+lecture-notes config vault ~/Obsidian/Lectures
 lecture-notes doctor
 ```
 
@@ -199,26 +201,22 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Use it as a Claude skill
 
-Ask your agent in plain words:
-
-> Make notes from https://www.youtube.com/watch?v=1GLDLn-HQe8
-
-Or call it directly. Plugin skills carry the plugin's name:
+Ask in plain words. No fixed syntax:
 
 ```text
 /lecture-notes:lecture-notes https://www.youtube.com/watch?v=1GLDLn-HQe8
-/lecture-notes:lecture-notes ~/Videos/lecture.mp4 vault ~/Obsidian/Lectures
-/lecture-notes:lecture-notes https://youtu.be/… in English
+/lecture-notes:lecture-notes ~/Videos/lecture.mp4 full text
+/lecture-notes:lecture-notes <link> into ~/Obsidian/Lectures, in English
+/lecture-notes:lecture-notes help
 ```
 
-Copied into `~/.claude/skills/`? Then it's just `/lecture-notes`.
+Or just say "make notes from this lecture: <link>".
 
-**Want everything, not a summary?** Add `full`:
+- **First run:** it asks where your vault is, then remembers it.
+- **Before work:** it shows the plan: title, length, model, time. It only asks if the job is long.
+- **`full text`:** everything said, in order, with slides and code in place.
+- **`help`:** shows a short usage card.
 
-```text
-/lecture-notes:lecture-notes https://www.youtube.com/watch?v=1GLDLn-HQe8 full
-```
+Change the vault any time: `lecture-notes config vault ~/Obsidian/Lectures`.
 
-You get every sentence in order. Slides, code and formulas sit where they were shown. `verify --full` checks nothing was added or left out.
-
-The skill extracts, writes, and verifies until it passes. It asks before long CPU jobs and before using cookies.
+Copied into `~/.claude/skills/`? Then the command is just `/lecture-notes`.
